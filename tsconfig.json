@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "outDir": "./dist/",
+        "sourceMap": true,
+        "noImplicitAny": false,
+        "module": "ESNext",
+        "target": "ESNext",
+        "moduleResolution": "Bundler",
+        "types": [],
+        "typeRoots": ["./node_modules/@types"],
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "useDefineForClassFields": false,
+        "jsx": "react",
+        "reactNamespace": "jsxFactory",
+        "lib": ["ESNext", "dom",  "scripthost"]
+    },
+    "include": [
+        "./src/**/*",
+        "node_modules/@arcgis/core/**/*"
+    ]
+}
