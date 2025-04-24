@@ -1,2 +1,0 @@
-# grafos
-node_modules/
