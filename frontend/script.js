@@ -1,5 +1,8 @@
 const API_BASE = 'http://localhost:5000';  // Cambia si es necesario
 
+let routePoints = [];
+let routingControl = null;
+
 // Configuración del mapa
 const map = L.map('map').setView([5.0703, -75.5138], 13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -26,6 +29,36 @@ async function loadNodes() {
 
 // Manejador de clics
 map.on('click', async function(e) {
+
+    if (routePoints.length < 2) {
+        // Guardar el punto para la ruta
+        routePoints.push(e.latlng);
+        L.marker(e.latlng).addTo(map).bindPopup(`Punto ${routePoints.length}`).openPopup();
+
+        if (routePoints.length === 2) {
+            // Si ya hay dos puntos, crear la ruta
+            if (routingControl) {
+                map.removeControl(routingControl);
+            }
+
+            routingControl = L.Routing.control({
+                waypoints: routePoints,
+                routeWhileDragging: false,
+                show: true
+            }).addTo(map);
+
+            // Reiniciar los puntos para permitir otra ruta
+            routingControl.on('routesfound', function(e) {
+                const route = e.routes[0];
+                const distanciaKm = (route.summary.totalDistance / 1000).toFixed(2);
+                const duracionMin = (route.summary.totalTime / 60).toFixed(1);
+                alert(`Ruta creada:\nDistancia: ${distanciaKm} km\nDuración: ${duracionMin} min`);
+            });
+
+            routePoints = [];
+        }
+    }
+
     const name = prompt("Nombre del punto:");
     if (!name) return;
     
