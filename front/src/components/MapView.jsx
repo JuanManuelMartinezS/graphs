@@ -1,16 +1,15 @@
 import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import L from 'leaflet';
-import 'leaflet-routing-machine';
 import 'leaflet/dist/leaflet.css';
 import Modal from './PointModal';
 
 const API_BASE = 'http://localhost:5000';
+const OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e36589d'; // Reemplaza con tu API key
 
 const MapView = forwardRef((props, ref) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const [routePoints, setRoutePoints] = useState([]);
-
   const [mode, setMode] = useState('view'); // 'view', 'addPoint', 'createRoute'
   const [clickedPosition, setClickedPosition] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -20,6 +19,7 @@ const MapView = forwardRef((props, ref) => {
     risk: '1'
   });
   const markersRef = useRef([]);
+  const routeLayersRef = useRef([]); // Para almacenar las capas de ruta
 
   // Exponer funciones al componente padre
   useImperativeHandle(ref, () => ({
@@ -40,7 +40,7 @@ const MapView = forwardRef((props, ref) => {
 
       // Cargar datos iniciales
       loadNodes();
-      loadRoutes(); // ¡Ahora vamos a implementar esta función!
+      loadRoutes();
 
       // Asegurar que el mapa se redimensiona correctamente
       setTimeout(() => {
@@ -87,10 +87,67 @@ const MapView = forwardRef((props, ref) => {
     }
   }, [modalOpen]);
 
-  // Implementar la función loadRoutes
+  // Función para dibujar una ruta usando OpenRouteService
+  const drawRoute = async (points) => {
+    if (!mapInstance.current || points.length < 2) return;
+
+    try {
+      const coordinates = points.map(point => [point.lng, point.lat]);
+      
+      const response = await fetch('https://api.openrouteservice.org/v2/directions/foot-walking/geojson', {
+        method: 'POST',
+        headers: {
+          'Authorization': OPENROUTE_API_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          coordinates: coordinates,
+          elevation: false,
+          instructions: false,
+          preference: 'recommended',
+          units: 'km'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error en la respuesta: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const routeGeometry = data.features[0].geometry;
+
+      // Dibujar la ruta en el mapa
+      const routeLayer = L.geoJSON(routeGeometry, {
+        style: {
+          color: '#0066ff',
+          weight: 5,
+          opacity: 0.8
+        }
+      }).addTo(mapInstance.current);
+
+      // Almacenar referencia a la capa para poder eliminarla después
+      routeLayersRef.current.push(routeLayer);
+
+      // Ajustar el mapa para mostrar toda la ruta
+      mapInstance.current.fitBounds(routeLayer.getBounds());
+
+    } catch (error) {
+      console.error("Error al calcular la ruta:", error);
+    }
+  };
+
+  // Cargar rutas desde el backend y dibujarlas
   const loadRoutes = async () => {
     try {
       if (!mapInstance.current) return;
+      
+      // Limpiar rutas existentes
+      routeLayersRef.current.forEach(layer => {
+        if (layer && mapInstance.current) {
+          mapInstance.current.removeLayer(layer);
+        }
+      });
+      routeLayersRef.current = [];
       
       const response = await fetch(`${API_BASE}/routes`);
       if (!response.ok) throw new Error("Error en la respuesta del servidor");
@@ -98,29 +155,7 @@ const MapView = forwardRef((props, ref) => {
       const routes = await response.json();
       routes.forEach(route => {
         if (route.points && route.points.length >= 2) {
-          // Crear waypoints a partir de los puntos de la ruta
-          const waypoints = route.points.map(point => L.latLng(point.lat, point.lng));
-          
-          // Crear una línea para la ruta
-          L.Routing.control({
-            waypoints: waypoints,
-            router: L.Routing.osrmv1({
-              serviceUrl: 'https://router.project-osrm.org/route/v1',
-              profile: 'walking'
-            }),
-            fitSelectedRoutes: false,
-            show: false,
-            lineOptions: {
-              styles: [
-                {color: '#0066ff', opacity: 0.8, weight: 5}
-              ],
-              missingRouteTolerance: 0
-            },
-            createMarker: function() { return null; },
-            addWaypoints: false,
-            routeDragInterval: 0,
-            collapsible: false
-          }).addTo(mapInstance.current);
+          drawRoute(route.points);
         }
       });
     } catch (error) {
@@ -128,11 +163,31 @@ const MapView = forwardRef((props, ref) => {
     }
   };
 
-  // Implementar la función handleCreateRouteClick que falta
   const handleCreateRouteClick = (e, map) => {
-    // Esta función debería manejar lo que sucede cuando se hace clic en el mapa en modo createRoute
-    console.log("Click para crear ruta en:", e.latlng);
-    // Aquí iría la lógica para añadir puntos a la ruta en creación
+    const newPoint = {
+      lat: e.latlng.lat,
+      lng: e.latlng.lng,
+      name: `Punto ${routePoints.length + 1}`
+    };
+    
+    setRoutePoints([...routePoints, newPoint]);
+    
+    // Si hay al menos 2 puntos, dibujar la ruta
+    if (routePoints.length >= 1) {
+      drawRoute([...routePoints, newPoint]);
+    }
+    
+    // Crear un marcador temporal para el punto
+    const marker = L.marker(e.latlng, {
+      icon: L.divIcon({
+        className: 'route-point-marker',
+        html: '<div style="background-color: purple; width: 15px; height: 15px; border-radius: 50%; border: 2px solid white;"></div>',
+        iconSize: [19, 19],
+        iconAnchor: [9, 9]
+      })
+    }).addTo(map);
+    
+    markersRef.current.push(marker);
   };
 
   const handleAddPoint = async () => {
@@ -180,13 +235,13 @@ const MapView = forwardRef((props, ref) => {
     try {
       if (!mapInstance.current) return;
 
-      // Limpiar marcadores existentes
+      // Limpiar marcadores existentes (excepto los de ruta si los hay)
       markersRef.current.forEach(marker => {
         if (marker && mapInstance.current) {
           marker.remove();
         }
       });
-      markersRef.current = markersRef.current.filter(m => m?.options?.isRouteMarker);
+      markersRef.current = [];
 
       const response = await fetch(`${API_BASE}/nodes`);
       if (!response.ok) throw new Error("Error en la respuesta del servidor");
@@ -210,7 +265,6 @@ const MapView = forwardRef((props, ref) => {
           iconAnchor: [12, 12]
         });
 
-        // Verificar que mapInstance.current exista antes de añadir el marcador
         if (mapInstance.current) {
           const marker = L.marker([node.lat, node.lng], {icon: customIcon})
             .addTo(mapInstance.current)
@@ -240,9 +294,16 @@ const MapView = forwardRef((props, ref) => {
             {mode === 'addPoint' ? 'Añadir Punto' : 'Crear Ruta'}
           </span>
           
+          {mode === 'createRoute' && routePoints.length > 0 && (
+            <span className="ml-2 text-sm">
+              Puntos seleccionados: {routePoints.length}
+            </span>
+          )}
+          
           <button 
             onClick={() => {
               setMode('view');
+              setRoutePoints([]);
             }}
             className="ml-4 px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"
           >

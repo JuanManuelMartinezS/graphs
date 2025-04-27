@@ -1,16 +1,16 @@
 import React, { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
-import 'leaflet-routing-machine';
 import 'leaflet/dist/leaflet.css';
 import { useNavigate } from 'react-router-dom';
 
 const API_BASE = 'http://localhost:5000';
+const OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e36589d'; // Reemplaza con tu API key
 
 function AddRoutePage() {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const [selectedNodes, setSelectedNodes] = useState([]);
-  const routingControlRef = useRef(null);
+  const routeLineRef = useRef(null);
   const markersRef = useRef([]);
   const [routeData, setRouteData] = useState({
     name: '',
@@ -57,14 +57,12 @@ function AddRoutePage() {
       if (!response.ok) throw new Error("Error en la respuesta del servidor");
 
       const nodesData = await response.json();
-      // Ya no necesitamos asignar IDs porque usaremos name como identificador único
       setNodes(nodesData);
     } catch (error) {
       console.error("Error al cargar nodos:", error);
     }
   };
 
-  // Renderizar nodos cuando se cargan o cuando cambia la selección
   useEffect(() => {
     if (nodes.length > 0) {
       renderNodes();
@@ -77,14 +75,13 @@ function AddRoutePage() {
     // Limpiar los marcadores existentes
     markersRef.current.forEach(marker => {
       if (marker && mapInstance.current) {
-        marker.off('click'); // Eliminar eventos anteriores primero
+        marker.off('click');
         marker.remove();
       }
     });
     markersRef.current = [];
 
     nodes.forEach(node => {
-      // Verificar si este nodo específico está seleccionado usando name
       const isSelected = selectedNodes.some(selectedNode => selectedNode.name === node.name);
       
       let markerColor;
@@ -97,7 +94,6 @@ function AddRoutePage() {
         default: markerColor = 'blue';
       }
 
-      // Estilo diferente para nodos seleccionados
       const borderStyle = isSelected ? '3px solid purple' : '2px solid white';
       const size = isSelected ? '25px' : '20px';
 
@@ -110,7 +106,7 @@ function AddRoutePage() {
 
       const marker = L.marker([node.lat, node.lng], { 
         icon: customIcon,
-        zIndexOffset: isSelected ? 1000 : 0 // Para que los seleccionados aparezcan arriba
+        zIndexOffset: isSelected ? 1000 : 0
       })
       .addTo(mapInstance.current)
       .bindPopup(`
@@ -120,7 +116,6 @@ function AddRoutePage() {
         <small>${node.lat.toFixed(4)}, ${node.lng.toFixed(4)}</small>
       `);
 
-      // Manejar el evento de click
       marker.on('click', () => toggleNodeSelection(node));
 
       markersRef.current.push(marker);
@@ -129,20 +124,17 @@ function AddRoutePage() {
 
   const toggleNodeSelection = (node) => {
     setSelectedNodes(prev => {
-      // Comprobar si este nodo específico ya está seleccionado usando name
       const nodeIndex = prev.findIndex(n => n.name === node.name);
       
       if (nodeIndex >= 0) {
-        // Si está seleccionado, lo eliminamos de la selección
         return prev.filter(n => n.name !== node.name);
       } else {
-        // Si no está seleccionado, lo añadimos a la selección
         return [...prev, node];
       }
     });
   };
 
-  const createRoute = () => {
+  const createRoute = async () => {
     if (selectedNodes.length < 2) {
       alert('Se necesitan al menos 2 nodos para crear una ruta');
       return;
@@ -150,76 +142,69 @@ function AddRoutePage() {
   
     if (!mapInstance.current) return;
   
-    // Eliminar control de ruta anterior si existe
-    if (routingControlRef.current) {
-      mapInstance.current.removeControl(routingControlRef.current);
-      routingControlRef.current = null;
+    // Eliminar ruta anterior si existe
+    if (routeLineRef.current) {
+      mapInstance.current.removeLayer(routeLineRef.current);
+      routeLineRef.current = null;
     }
   
-    // Crear waypoints a partir de los nodos seleccionados
-    const waypoints = selectedNodes.map(node => L.latLng(node.lat, node.lng));
+    // Crear array de coordenadas para OpenRouteService
+    const coordinates = selectedNodes.map(node => [node.lng, node.lat]);
   
-    // Configurar el control de routing con más opciones
-    routingControlRef.current = L.Routing.control({
-      waypoints: waypoints,
-      router: L.Routing.osrmv1({
-        serviceUrl: 'https://router.project-osrm.org/route/v1',
-        profile: 'driving', // Cambiado a 'driving' para más flexibilidad en rutas
-        timeout: 30000,
-      }),
-      routeWhileDragging: false,
-      showAlternatives: false,
-      fitSelectedRoutes: true,
-      optimizeWaypoints: true,
-      show: false, // Esto oculta el panel de instrucciones
-      lineOptions: {
-        styles: [
-          {color: '#0066ff', opacity: 0.8, weight: 5}
-        ],
-        missingRouteTolerance: 0,
-        extendToWaypoints: true, // Permite rutas más flexibles
-        addWaypoints: false // Evita añadir waypoints intermedios
-      },
-      createMarker: function() { return null; }, // No crear marcadores por defecto
-      addWaypoints: false, // No mostrar waypoints
-      routeDragInterval: 0,
-      collapsible: false,
-      // Deshabilitar completamente el panel de instrucciones
-      plan: L.Routing.plan(waypoints, {
-        createMarker: function() { return null; },
-        dragStyles: []
-      })
-    }).addTo(mapInstance.current);
+    try {
+      const response = await fetch('https://api.openrouteservice.org/v2/directions/foot-walking/geojson', {
+        method: 'POST',
+        headers: {
+          'Authorization': OPENROUTE_API_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          coordinates: coordinates,
+          elevation: false,
+          instructions: false,
+          preference: 'recommended',
+          units: 'km'
+        })
+      });
   
-    // Configuración adicional para evitar que se muestren instrucciones
-    if (routingControlRef.current._container) {
-      routingControlRef.current._container.style.display = 'none';
-    }
+      if (!response.ok) {
+        throw new Error(`Error en la respuesta: ${response.status}`);
+      }
   
-    // Capturar eventos del routing para obtener información de la ruta
-    routingControlRef.current.on('routesfound', function(e) {
-      const routes = e.routes;
-      const summary = routes[0].summary;
+      const data = await response.json();
+  
+      // Extraer la geometría de la ruta
+      const routeGeometry = data.features[0].geometry;
+  
+      // Dibujar la ruta en el mapa
+      const routeLine = L.geoJSON(routeGeometry, {
+        style: {
+          color: '#0066ff',
+          weight: 5,
+          opacity: 0.8
+        }
+      }).addTo(mapInstance.current);
+  
+      routeLineRef.current = routeLine;
+  
+      // Extraer información de la ruta
+      const distance = data.features[0].properties.summary.distance; // en km
+      const duration = data.features[0].properties.summary.duration; // en segundos
+  
       // Guardar distancia y tiempo
       setRouteDistance({
-        distance: (summary.totalDistance / 1000).toFixed(2), // convertir a km
-        time: Math.round(summary.totalTime / 60) // convertir a minutos
+        distance: distance.toFixed(2),
+        time: Math.round(duration / 60) // convertir a minutos
       });
-      
-      // Opcional: puedes forzar una ruta más directa aquí si es necesario
-      // Esto es un ejemplo de cómo podrías modificar la ruta
-      if (routes[0].coordinates.length > 50) { // Si la ruta tiene muchos puntos (compleja)
-        // Podrías implementar lógica para simplificar la ruta
-      }
-    });
   
-    // Agregar manejo de errores
-    routingControlRef.current.on('routingerror', function(e) {
-      console.error("Error de enrutamiento:", e.error);
-      alert(`Error al calcular la ruta: ${e.error.message || 'Error desconocido'}. Intente con menos puntos o más cercanos entre sí.`);
-    });
+      // Ajustar el mapa para mostrar toda la ruta
+      mapInstance.current.fitBounds(routeLine.getBounds());
+  
+    } catch (error) {
+      console.error("Error al calcular la ruta:", error);
+      alert(`Error al calcular la ruta: ${error.message}. Intente con menos puntos o más cercanos entre sí.`);
+    }
   };
-  
 
   const saveRoute = async () => {
     if (selectedNodes.length < 2) {
@@ -228,13 +213,11 @@ function AddRoutePage() {
     }
 
     // Si aún no se ha visualizado la ruta, hacerlo primero
-    if (!routingControlRef.current) {
-      createRoute();
-      // Esperar a que se calcule la ruta antes de guardar
-      setTimeout(() => saveRouteData(), 1000);
-    } else {
-      saveRouteData();
+    if (!routeLineRef.current) {
+      await createRoute();
     }
+    
+    saveRouteData();
   };
 
   const saveRouteData = async () => {
@@ -244,7 +227,7 @@ function AddRoutePage() {
         points: selectedNodes.map(node => ({ 
           lat: node.lat, 
           lng: node.lng,
-          nodeName: node.name // Usar name en lugar de nodeId
+          nodeName: node.name
         })),
         difficulty: parseInt(routeData.difficulty),
         popularity: parseInt(routeData.popularity),
@@ -265,7 +248,7 @@ function AddRoutePage() {
       const result = await response.json();
       if (result.success) {
         alert('¡Ruta guardada con éxito!');
-        navigate('/'); // Volver a la página principal
+        navigate('/');
       }
     } catch (error) {
       console.error("Error:", error);
@@ -359,7 +342,6 @@ function AddRoutePage() {
       <div className="flex-1 relative">
         <div ref={mapRef} className="absolute inset-0" />
         
-        {/* Indicador de nodos seleccionados */}
         {selectedNodes.length > 0 && (
           <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500] bg-white p-2 rounded shadow-lg">
             Nodos seleccionados: {selectedNodes.length}
