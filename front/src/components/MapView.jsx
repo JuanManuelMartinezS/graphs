@@ -1,16 +1,17 @@
 import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import Modal from './PointModal';
+import PointModal from './PointModal';
+import Modal from './Modal';
 
 const API_BASE = 'http://localhost:5000';
-const OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e36589d'; // Reemplaza con tu API key
+const OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e36589d';
 
 const MapView = forwardRef((props, ref) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const [routePoints, setRoutePoints] = useState([]);
-  const [mode, setMode] = useState('view'); // 'view', 'addPoint', 'createRoute'
+  const [mode, setMode] = useState('view');
   const [clickedPosition, setClickedPosition] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [pointData, setPointData] = useState({
@@ -18,10 +19,14 @@ const MapView = forwardRef((props, ref) => {
     description: '',
     risk: '1'
   });
+  const [selectedRoute, setSelectedRoute] = useState(null);
   const markersRef = useRef([]);
-  const routeLayersRef = useRef([]); // Para almacenar las capas de ruta
+  const routeLayersRef = useRef([]);
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [routes, setRoutes] = useState([]);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [routeToDelete, setRouteToDelete] = useState(null);
 
-  // Exponer funciones al componente padre
   useImperativeHandle(ref, () => ({
     setMode: (newMode) => {
       setMode(newMode);
@@ -30,7 +35,6 @@ const MapView = forwardRef((props, ref) => {
 
   useEffect(() => {
     if (mapRef.current && !mapInstance.current) {
-      // Inicializar el mapa
       const map = L.map(mapRef.current).setView([5.0703, -75.5138], 13);
       mapInstance.current = map;
 
@@ -38,18 +42,15 @@ const MapView = forwardRef((props, ref) => {
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
-      // Cargar datos iniciales
       loadNodes();
       loadRoutes();
 
-      // Asegurar que el mapa se redimensiona correctamente
       setTimeout(() => {
         map.invalidateSize();
       }, 0);
     }
 
     return () => {
-      // Limpieza al desmontar el componente
       if (mapInstance.current) {
         mapInstance.current.off();
         mapInstance.current.remove();
@@ -85,10 +86,9 @@ const MapView = forwardRef((props, ref) => {
         mapInstance.current.invalidateSize();
       }, 300);
     }
-  }, [modalOpen]);
+  }, [modalOpen, deleteConfirmOpen]);
 
-  // Función para dibujar una ruta usando OpenRouteService
-  const drawRoute = async (points) => {
+  const drawRoute = async (points, routeData) => {
     if (!mapInstance.current || points.length < 2) return;
 
     try {
@@ -116,7 +116,6 @@ const MapView = forwardRef((props, ref) => {
       const data = await response.json();
       const routeGeometry = data.features[0].geometry;
 
-      // Dibujar la ruta en el mapa
       const routeLayer = L.geoJSON(routeGeometry, {
         style: {
           color: '#0066ff',
@@ -125,25 +124,91 @@ const MapView = forwardRef((props, ref) => {
         }
       }).addTo(mapInstance.current);
 
-      // Almacenar referencia a la capa para poder eliminarla después
-      routeLayersRef.current.push(routeLayer);
+      routeLayer.routeData = routeData;
 
-      // Ajustar el mapa para mostrar toda la ruta
+      // Changed: Create popup content for the route
+      if (routeData) {
+        const popupContent = `
+          <div style="min-width: 250px;">
+            <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">${routeData.name || 'Ruta sin nombre'}</h3>
+            <p style="margin-bottom: 8px;">${routeData.description || 'Sin descripción'}</p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+              <div style="background-color: #f3f4f6; padding: 8px; border-radius: 4px;">
+                <p style="font-size: 12px; font-weight: 500; color: #4b5563; margin: 0;">Distancia</p>
+                <p style="font-size: 16px; font-weight: bold; margin: 0;">${routeData.distance} km</p>
+              </div>
+              <div style="background-color: #f3f4f6; padding: 8px; border-radius: 4px;">
+                <p style="font-size: 12px; font-weight: 500; color: #4b5563; margin: 0;">Tiempo estimado</p>
+                <p style="font-size: 16px; font-weight: bold; margin: 0;">${routeData.duration || '0'} min</p>
+              </div>
+              <div style="background-color: #f3f4f6; padding: 8px; border-radius: 4px;">
+                <p style="font-size: 12px; font-weight: 500; color: #4b5563; margin: 0;">Dificultad</p>
+                <p style="font-size: 16px; font-weight: bold; margin: 0;">${routeData.difficulty || 'N/A'}/5</p>
+              </div>
+              <div style="background-color: #f3f4f6; padding: 8px; border-radius: 4px;">
+                <p style="font-size: 12px; font-weight: 500; color: #4b5563; margin: 0;">Popularidad</p>
+                <p style="font-size: 16px; font-weight: bold; margin: 0;">${routeData.popularity || 'N/A'}/5</p>
+              </div>
+            </div>
+            
+            <p style="font-size: 13px; font-weight: 500; color: #4b5563; margin-bottom: 4px;">Puntos de la ruta:</p>
+            <ul style="padding-left: 20px; margin-top: 0; margin-bottom: 12px;">
+              ${routeData.points?.map((point, index) => `
+                <li style="font-size: 13px;">${point.nodeName || `Punto ${index + 1}`} (${point.lat.toFixed(4)}, ${point.lng.toFixed(4)})</li>
+              `).join('')}
+            </ul>
+            
+            <div style="display: flex; justify-content: space-between; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+              <button 
+                onclick="window.dispatchEvent(new CustomEvent('deleteRoute', { detail: '${routeData.name}' }))"
+                style="padding: 6px 12px; background-color: #ef4444; color: white; border-radius: 4px; border: none; cursor: pointer;"
+              >
+                Eliminar Ruta
+              </button>
+              <button 
+                onclick="window.dispatchEvent(new CustomEvent('simulateRoute', { detail: '${routeData.name}' }))"
+                style="padding: 6px 12px; background-color: #3b82f6; color: white; border-radius: 4px; border: none; cursor: pointer;"
+              >
+                Iniciar Simulación
+              </button>
+            </div>
+          </div>
+        `;
+        
+        routeLayer.bindPopup(popupContent, { 
+          maxWidth: 300,
+          className: 'route-popup'
+        });
+      }
+
+      routeLayer.on('click', (e) => {
+        if (mode === 'view') {
+          L.DomEvent.stopPropagation(e);
+          // Open popup instead of modal
+          const popup = e.layer.getPopup();
+          if (!popup) {
+            e.layer.openPopup(e.latlng);
+          }
+        }
+      });
+
+      routeLayersRef.current.push(routeLayer);
       mapInstance.current.fitBounds(routeLayer.getBounds());
 
+      return routeLayer;
     } catch (error) {
       console.error("Error al calcular la ruta:", error);
     }
   };
 
-  // Cargar rutas desde el backend y dibujarlas
   const loadRoutes = async () => {
     try {
       if (!mapInstance.current) return;
       
-      // Limpiar rutas existentes
       routeLayersRef.current.forEach(layer => {
         if (layer && mapInstance.current) {
+          layer.off('click');
           mapInstance.current.removeLayer(layer);
         }
       });
@@ -152,12 +217,14 @@ const MapView = forwardRef((props, ref) => {
       const response = await fetch(`${API_BASE}/routes`);
       if (!response.ok) throw new Error("Error en la respuesta del servidor");
       
-      const routes = await response.json();
-      routes.forEach(route => {
+      const routesData = await response.json();
+      setRoutes(routesData);
+      
+      for (const route of routesData) {
         if (route.points && route.points.length >= 2) {
-          drawRoute(route.points);
+          await drawRoute(route.points, route);
         }
-      });
+      }
     } catch (error) {
       console.error("Error al cargar rutas:", error);
     }
@@ -172,12 +239,10 @@ const MapView = forwardRef((props, ref) => {
     
     setRoutePoints([...routePoints, newPoint]);
     
-    // Si hay al menos 2 puntos, dibujar la ruta
     if (routePoints.length >= 1) {
       drawRoute([...routePoints, newPoint]);
     }
     
-    // Crear un marcador temporal para el punto
     const marker = L.marker(e.latlng, {
       icon: L.divIcon({
         className: 'route-point-marker',
@@ -231,11 +296,79 @@ const MapView = forwardRef((props, ref) => {
     }
   };
 
+  const handleDeleteNode = async (nodeName) => {
+    try {
+      if (!window.confirm(`¿Estás seguro de que quieres eliminar el punto "${nodeName}"?`)) {
+        return;
+      }
+  
+      const response = await fetch(`${API_BASE}/nodes/${nodeName}`, {
+        method: 'DELETE',
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        if (data.in_use) {
+          alert(`No se puede eliminar el punto "${nodeName}" porque está siendo utilizado en una o más rutas.`);
+        } else {
+          throw new Error(data.error || "Error al eliminar");
+        }
+        return;
+      }
+  
+      if (data.success) {
+        loadNodes();
+        if (selectedNode && selectedNode.name === nodeName) {
+          setSelectedNode(null);
+        }
+      }
+    } catch (error) {
+      console.error("Error al eliminar nodo:", error);
+      alert(error.message || "Error al eliminar el punto");
+    }
+  };
+
+  const handleDeleteRoute = async (routeName) => {
+    setRouteToDelete(routeName);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteRoute = async () => {
+    try {
+      if (!routeToDelete) return;
+      
+      const response = await fetch(`${API_BASE}/routes/${routeToDelete}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al eliminar");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        loadRoutes();
+        setSelectedRoute(null);
+      }
+    } catch (error) {
+      console.error("Error al eliminar ruta:", error);
+      alert(error.message || "Error al eliminar la ruta");
+    } finally {
+      setDeleteConfirmOpen(false);
+      setRouteToDelete(null);
+    }
+  };
+
+  const startSimulation = (routeName) => {
+    alert(`La simulación para la ruta "${routeName}" aún no está implementada.`);
+  };
+
   const loadNodes = async () => {
     try {
       if (!mapInstance.current) return;
 
-      // Limpiar marcadores existentes (excepto los de ruta si los hay)
       markersRef.current.forEach(marker => {
         if (marker && mapInstance.current) {
           marker.remove();
@@ -269,11 +402,29 @@ const MapView = forwardRef((props, ref) => {
           const marker = L.marker([node.lat, node.lng], {icon: customIcon})
             .addTo(mapInstance.current)
             .bindPopup(`
-              <b>${node.name}</b><br>
-              ${node.description}<br>
-              Riesgo: ${node.risk}<br>
-              <small>${node.lat.toFixed(4)}, ${node.lng.toFixed(4)}</small>
+              <div style="min-width: 200px;">
+                <b>${node.name}</b><br>
+                ${node.description}<br>
+                Riesgo: ${node.risk}<br>
+                <small>${node.lat.toFixed(4)}, ${node.lng.toFixed(4)}</small>
+                <div style="margin-top: 10px; text-align: center;">
+                  <button 
+                    onclick="window.dispatchEvent(new CustomEvent('deleteNode', { detail: '${node.name}' }))"
+                    style="padding: 5px 10px; background-color: #ef4444; color: white; border-radius: 4px; border: none; cursor: pointer;"
+                  >
+                    Eliminar Punto
+                  </button>
+                </div>
+              </div>
             `);
+          
+          marker.on('popupopen', () => {
+            setSelectedNode(node);
+          });
+          
+          marker.on('popupclose', () => {
+            setSelectedNode(null);
+          });
           
           markersRef.current.push(marker);
         }
@@ -284,9 +435,33 @@ const MapView = forwardRef((props, ref) => {
     }
   };
 
+  // Add event listeners for custom events from popups
+  useEffect(() => {
+    const handleDeleteNodeEvent = (e) => {
+      handleDeleteNode(e.detail);
+    };
+
+    const handleDeleteRouteEvent = (e) => {
+      handleDeleteRoute(e.detail);
+    };
+
+    const handleSimulateRouteEvent = (e) => {
+      startSimulation(e.detail);
+    };
+
+    window.addEventListener('deleteNode', handleDeleteNodeEvent);
+    window.addEventListener('deleteRoute', handleDeleteRouteEvent);
+    window.addEventListener('simulateRoute', handleSimulateRouteEvent);
+    
+    return () => {
+      window.removeEventListener('deleteNode', handleDeleteNodeEvent);
+      window.removeEventListener('deleteRoute', handleDeleteRouteEvent);
+      window.removeEventListener('simulateRoute', handleSimulateRouteEvent);
+    };
+  }, []);
+
   return (
     <>
-      {/* Indicador de modo actual */}
       {mode !== 'view' && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500] bg-white p-2 rounded shadow-lg">
           Modo actual: 
@@ -314,7 +489,8 @@ const MapView = forwardRef((props, ref) => {
 
       <div ref={mapRef} className="absolute inset-0 z-0" />
       
-      <Modal 
+      {/* Modal para agregar punto */}
+      <PointModal 
         isOpen={modalOpen}
         onClose={() => {
           setModalOpen(false);
@@ -362,6 +538,35 @@ const MapView = forwardRef((props, ref) => {
             <p>Coordenadas:</p>
             <p>Latitud: {clickedPosition?.lat.toFixed(6)}</p>
             <p>Longitud: {clickedPosition?.lng.toFixed(6)}</p>
+          </div>
+        </div>
+      </PointModal>
+
+      {/* Modal de confirmación para eliminar ruta */}
+      <Modal
+        isOpen={deleteConfirmOpen}
+        onClose={() => {
+          setDeleteConfirmOpen(false);
+          setRouteToDelete(null);
+        }}
+        onSubmit={confirmDeleteRoute}
+      >
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold mb-4">Confirmar eliminación</h2>
+          <p>¿Estás seguro de que quieres eliminar la ruta "{routeToDelete}"?</p>
+          <div className="flex justify-end space-x-3 mt-4">
+            <button
+              onClick={() => setDeleteConfirmOpen(false)}
+              className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={confirmDeleteRoute}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              Eliminar
+            </button>
           </div>
         </div>
       </Modal>

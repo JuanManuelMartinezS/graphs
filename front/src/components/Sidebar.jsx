@@ -27,10 +27,6 @@ function Sidebar({ onAddPoint, onCreateRoute }) {
       >
         Añadir punto
       </button>
-
-      <button className="w-full bg-red-500 hover:bg-red-600 p-2 rounded transition">
-        Eliminar punto
-      </button>
     </div>
   );
 }

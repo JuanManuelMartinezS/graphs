@@ -1,6 +1,6 @@
 import React from 'react';
 
-function Modal({ isOpen, onClose, onSubmit, children }) {
+function PointModal({ isOpen, onClose, onSubmit, children }) {
     if (!isOpen) return null;
   
     return (
@@ -26,4 +26,4 @@ function Modal({ isOpen, onClose, onSubmit, children }) {
     );
   }
 
-export default Modal;
+export default PointModal;

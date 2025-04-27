@@ -1,78 +1,24 @@
 [
     {
+        "name": "lejos",
+        "description": "a",
+        "difficulty": 4,
+        "popularity": 3,
         "points": [
             {
-                "lat": 5.061106743023463,
-                "lng": -75.52165031433107,
-                "nodeName": "wew"
+                "lat": 5.066535719408739,
+                "lng": -75.51819562911989,
+                "nodeName": "P1"
             },
             {
-                "lat": 5.065915877953618,
-                "lng": -75.5186676979065,
-                "nodeName": "casa"
+                "lat": 5.06161971911987,
+                "lng": -75.50122261047363,
+                "nodeName": "P3"
             }
         ],
-        "created_at": "2025-04-26T23:16:38.405887",
-        "name": "",
-        "description": "",
-        "distance": 0.82,
-        "duration": 0
-    },
-    {
-        "points": [
-            {
-                "lat": 5.061106743023463,
-                "lng": -75.52165031433107,
-                "nodeName": "wew"
-            },
-            {
-                "lat": 5.0693282581373085,
-                "lng": -75.51477485918645,
-                "nodeName": "3"
-            }
-        ],
-        "created_at": "2025-04-26T23:27:12.707426",
-        "name": "",
-        "description": "",
-        "distance": 1.63,
-        "duration": 0
-    },
-    {
-        "points": [
-            {
-                "lat": 5.061106743023463,
-                "lng": -75.52165031433107,
-                "nodeName": "wew"
-            },
-            {
-                "lat": 5.063233453770233,
-                "lng": -75.4999351501465,
-                "nodeName": "hospital"
-            }
-        ],
-        "created_at": "2025-04-26T23:27:33.823734",
-        "name": "",
-        "description": "",
-        "distance": 3.2,
-        "duration": 0
-    },
-    {
-        "points": [
-            {
-                "lat": 5.063073149183769,
-                "lng": -75.5127239227295,
-                "nodeName": ""
-            },
-            {
-                "lat": 5.0693282581373085,
-                "lng": -75.51477485918645,
-                "nodeName": "3"
-            }
-        ],
-        "created_at": "2025-04-26T23:29:28.902911",
-        "name": "",
-        "description": "",
-        "distance": 0.87,
-        "duration": 0
+        "distance": 2.49,
+        "estimatedTime": 30,
+        "created_at": "2025-04-27T16:55:37.791609",
+        "duration": 30
     }
 ]
