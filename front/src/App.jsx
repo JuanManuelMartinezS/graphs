@@ -2,9 +2,13 @@ import React, { useRef } from 'react';
 import MapView from './components/MapView';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
+import 'leaflet-routing-machine';
+import 'leaflet/dist/leaflet.css';
+import { useNavigate } from 'react-router-dom';
 
 function App() {
   const mapViewRef = useRef();
+  const navigate = useNavigate();
 
   const handleAddPoint = () => {
     mapViewRef.current?.setMode('addPoint');

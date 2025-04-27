@@ -1,6 +1,9 @@
 import React from 'react';
 
-function Sidebar({ onAddPoint }) {
+
+function Sidebar({ onAddPoint, onCreateRoute }) {
+
+
   return (
     <div className="w-64 bg-gray-700 text-white p-4 space-y-2 overflow-y-auto h-full">
       <button className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition">
@@ -24,6 +27,7 @@ function Sidebar({ onAddPoint }) {
       >
         Añadir punto
       </button>
+
       <button className="w-full bg-red-500 hover:bg-red-600 p-2 rounded transition">
         Eliminar punto
       </button>
