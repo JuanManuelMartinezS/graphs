@@ -1,6 +1,6 @@
-import React, { useRef, useState, useEffect } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const API_BASE = 'http://localhost:5000';
@@ -21,6 +21,12 @@ function AddRoutePage() {
   const [nodes, setNodes] = useState([]);
   const [routeDistance, setRouteDistance] = useState(null);
   const navigate = useNavigate();
+
+  const [errors, setErrors] = useState({
+    name: false,
+    description: false,
+    selectedNodes: false
+  });
 
   useEffect(() => {
     if (mapRef.current && !mapInstance.current) {
@@ -134,6 +140,17 @@ function AddRoutePage() {
     });
   };
 
+  const validateForm = () => {
+    const newErrors = {
+      name: !routeData.name.trim(),
+      description: !routeData.description.trim(),
+      selectedNodes: selectedNodes.length < 2
+    };
+    
+    setErrors(newErrors);
+    return !Object.values(newErrors).some(error => error);
+  };
+
   const createRoute = async () => {
     if (selectedNodes.length < 2) {
       alert('Se necesitan al menos 2 nodos para crear una ruta');
@@ -161,11 +178,12 @@ function AddRoutePage() {
         body: JSON.stringify({
           coordinates: coordinates,
           elevation: false,
-          instructions: false,
-          preference: 'recommended',
+          instructions: true,  // ← Cambiado a true para obtener los segmentos
+          geometry: true,
           units: 'km'
         })
       });
+
   
       if (!response.ok) {
         throw new Error(`Error en la respuesta: ${response.status}`);
@@ -207,6 +225,11 @@ function AddRoutePage() {
   };
 
   const saveRoute = async () => {
+
+    if (!validateForm()) {
+      return; // Detiene la ejecución si hay errores
+    }
+  
     if (selectedNodes.length < 2) {
       alert('Se necesitan al menos 2 nodos para guardar una ruta');
       return;
@@ -220,12 +243,24 @@ function AddRoutePage() {
     saveRouteData();
   };
 
+
   const saveRouteData = async () => {
     try {
+      if (selectedNodes.length < 2) {
+        alert('Se necesitan al menos 2 nodos para guardar una ruta');
+        return;
+      }
+  
+      // Si no hemos calculado la ruta aún, hacerlo primero
+      if (!routeDistance) {
+        await createRoute();
+      }
+  
+      // Preparar datos para enviar al backend
       const routeDataToSend = {
         ...routeData,
-        points: selectedNodes.map(node => ({ 
-          lat: node.lat, 
+        points: selectedNodes.map(node => ({
+          lat: node.lat,
           lng: node.lng,
           nodeName: node.name
         })),
@@ -234,7 +269,8 @@ function AddRoutePage() {
         distance: routeDistance ? parseFloat(routeDistance.distance) : null,
         estimatedTime: routeDistance ? routeDistance.time : null
       };
-
+  
+      // Enviar al backend para que calcule el grafo
       const response = await fetch(`${API_BASE}/routes`, {
         method: 'POST',
         headers: {
@@ -242,9 +278,12 @@ function AddRoutePage() {
         },
         body: JSON.stringify(routeDataToSend)
       });
-
-      if (!response.ok) throw new Error("Error al guardar la ruta");
-
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error al guardar la ruta");
+      }
+  
       const result = await response.json();
       if (result.success) {
         alert('¡Ruta guardada con éxito!');
@@ -258,32 +297,42 @@ function AddRoutePage() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
-      <div className="w-64 bg-gray-700 text-white p-4 space-y-4 overflow-y-auto h-full">
+      <div className="w-64 bg-gray-500 text-white p-4 space-y-4 overflow-y-auto h-full">
         <h2 className="text-xl font-bold">Crear Nueva Ruta</h2>
         
         <div>
-          <label className="block text-sm font-medium mb-1">Nombre de la ruta</label>
+          <label className="block text-sm font-medium mb-1">Nombre de la ruta *</label>
           <input
             type="text"
-            className="w-full p-2 rounded text-black"
+            className={`w-full p-2 rounded text-black border-2${errors.name ? 'border-2 border-red-500' : ''}`}
             value={routeData.name}
-            onChange={(e) => setRouteData({...routeData, name: e.target.value})}
+            onChange={(e) => {
+              setRouteData({...routeData, name: e.target.value});
+              setErrors({...errors, name: false});
+            }}
+            required
           />
+          {errors.name && <p className="text-red-400 text-xs mt-1">Este campo es requerido</p>}
         </div>
         
         <div>
-          <label className="block text-sm font-medium mb-1">Descripción</label>
+          <label className="block text-sm font-medium mb-1">Descripción *</label>
           <textarea
-            className="w-full p-2 rounded text-black"
+            className={`w-full p-2 rounded text-black border-2${errors.description ? 'border-2 border-red-500' : ''}`}
             value={routeData.description}
-            onChange={(e) => setRouteData({...routeData, description: e.target.value})}
+            onChange={(e) => {
+              setRouteData({...routeData, description: e.target.value});
+              setErrors({...errors, description: false});
+            }}
+            required
           />
+          {errors.description && <p className="text-red-400 text-xs mt-1">Este campo es requerido</p>}
         </div>
         
         <div>
           <label className="block text-sm font-medium mb-1">Dificultad (1-5)</label>
           <select
-            className="w-full p-2 rounded text-black"
+            className="w-full p-2 rounded text-black border-2"
             value={routeData.difficulty}
             onChange={(e) => setRouteData({...routeData, difficulty: e.target.value})}
           >
@@ -298,7 +347,7 @@ function AddRoutePage() {
         <div>
           <label className="block text-sm font-medium mb-1">Popularidad (1-5)</label>
           <select
-            className="w-full p-2 rounded text-black"
+            className="w-full p-2 rounded text-black border-2"
             value={routeData.popularity}
             onChange={(e) => setRouteData({...routeData, popularity: e.target.value})}
           >
@@ -311,25 +360,42 @@ function AddRoutePage() {
         </div>
         
         <div className="pt-2">
-          <p className="text-sm">Nodos seleccionados: {selectedNodes.length}</p>
+          <p className={`text-sm ${errors.selectedNodes ? 'text-red-400' : ''}`}>
+            Nodos seleccionados: {selectedNodes.length} {selectedNodes.length < 2 && '(Se requieren al menos 2)'}
+          </p>
+          {errors.selectedNodes && <p className="text-red-400 text-xs">Selecciona al menos 2 nodos</p>}
+          
           {routeDistance && (
             <div className="my-2 p-2 bg-gray-800 rounded">
               <p className="text-sm">Distancia: {routeDistance.distance} km</p>
               <p className="text-sm">Tiempo est.: {routeDistance.time} min</p>
             </div>
           )}
+          
           <button
             onClick={createRoute}
-            className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded mt-2"
+            disabled={selectedNodes.length < 2}
+            className={`w-full p-2 rounded mt-2 ${
+              selectedNodes.length < 2
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-blue-500 hover:bg-blue-600'
+            }`}
           >
             Visualizar Ruta
           </button>
+          
           <button
             onClick={saveRoute}
-            className="w-full bg-green-500 hover:bg-green-600 p-2 rounded mt-2"
+            disabled={!routeData.name || !routeData.description || selectedNodes.length < 2}
+            className={`w-full p-2 rounded mt-2 ${
+              !routeData.name || !routeData.description || selectedNodes.length < 2
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-green-500 hover:bg-green-600'
+            }`}
           >
             Guardar Ruta
           </button>
+          
           <button
             onClick={() => navigate('/')}
             className="w-full bg-gray-500 hover:bg-gray-600 p-2 rounded mt-2"

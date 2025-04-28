@@ -257,7 +257,11 @@ const MapView = forwardRef((props, ref) => {
 
   const handleAddPoint = async () => {
     try {
-      if (!clickedPosition) return;
+      if (!pointData.name || !pointData.description || !pointData.risk || !clickedPosition) {
+        alert("Por favor complete todos los campos requeridos");
+        return;
+      }
+      
       
       const response = await fetch(`${API_BASE}/nodes`, {
         method: 'POST',
@@ -497,6 +501,8 @@ const MapView = forwardRef((props, ref) => {
           setMode('view');
         }}
         onSubmit={handleAddPoint}
+    
+        disableSubmit={!pointData.name || !pointData.description || !pointData.risk || !clickedPosition}
       >
         <h2 className="text-xl font-bold mb-4">Añadir nuevo punto</h2>
         <div className="space-y-4">

@@ -1,6 +1,6 @@
 import React from 'react';
 
-function PointModal({ isOpen, onClose, onSubmit, children }) {
+function PointModal({ isOpen, onClose, onSubmit, children, disableSubmit }) {
     if (!isOpen) return null;
   
     return (
@@ -16,7 +16,12 @@ function PointModal({ isOpen, onClose, onSubmit, children }) {
             </button>
             <button 
               onClick={onSubmit}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              disabled={disableSubmit}
+              className={`px-4 py-2 rounded ${
+                disableSubmit 
+                  ? 'bg-blue-300 cursor-not-allowed text-white' 
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+              }`}
             >
               Guardar
             </button>
@@ -24,6 +29,6 @@ function PointModal({ isOpen, onClose, onSubmit, children }) {
         </div>
       </div>
     );
-  }
+}
 
 export default PointModal;

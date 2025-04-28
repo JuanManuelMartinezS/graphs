@@ -3,6 +3,10 @@ from flask_cors import CORS
 import os
 import json
 from datetime import datetime
+from grafo import Graph
+from math import radians, sin, cos, sqrt, atan2
+import requests
+
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -11,7 +15,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 DATA_DIR = 'data'
 NODES_FILE = os.path.join(DATA_DIR, 'nodes.json')
 ROUTES_FILE = os.path.join(DATA_DIR, 'routes.json')
-
+OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e36589d'
 # Asegurar que el directorio existe
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -30,6 +34,52 @@ def save_data(data, filename):
     """Guardar datos en un archivo JSON"""
     with open(filename, 'w') as f:
         json.dump(data, f, indent=4)
+
+       
+
+def haversine(lon1, lat1, lon2, lat2):
+    """
+    Calculate the great circle distance between two points 
+    on the earth (specified in decimal degrees)
+    """
+    # Convertir grados a radianes
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+
+    # Fórmula de Haversine
+    dlon = lon2 - lon1 
+    dlat = lat2 - lat1 
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * atan2(sqrt(a), sqrt(1-a)) 
+    r = 6371  # Radio de la Tierra en kilómetros
+    return c * r
+
+# Reemplazar la función haversine por esta nueva función que usa ORS
+def get_ors_distance(coords1, coords2, api_key):
+    """Obtiene la distancia entre dos puntos usando OpenRouteService"""
+    url = "https://api.openrouteservice.org/v2/directions/foot-walking"
+    headers = {
+        'Authorization': api_key,
+        'Content-Type': 'application/json'
+    }
+    
+    body = {
+        "coordinates": [coords1, coords2],
+        "instructions": False,
+        "geometry": False
+    }
+    
+    try:
+        response = requests.post(url, json=body, headers=headers)
+        if response.status_code != 200:
+            raise ValueError(f"Error de OpenRouteService: {response.text}")
+        
+        data = response.json()
+        distance = data['features'][0]['properties']['segments'][0]['distance']  # en metros
+        return distance
+    except Exception as e:
+        print(f"Error al obtener distancia de ORS: {str(e)}")
+        # Fallback a Haversine si ORS falla
+        return haversine(coords1[0], coords1[1], coords2[0], coords2[1])
 
 @app.route('/')
 def home():
@@ -58,6 +108,8 @@ def handle_nodes():
                 risk = int(data['risk'])
                 if risk < 1 or risk > 5:
                     return jsonify({"error": "El nivel de riesgo debe estar entre 1 y 5"}), 400
+            if 'description' not in data:
+                return jsonify({"error": "La descripción es requerida"}), 400
             
             # Verificar si el nodo ya existe (si tiene nombre)
             if 'name' in data:
@@ -163,30 +215,61 @@ def handle_routes():
             if not data or 'points' not in data or len(data['points']) < 2:
                 return jsonify({"error": "Se requieren al menos 2 puntos para crear una ruta"}), 400
             
-            # Verificar si la ruta ya existe (si tiene nombre)
+            # Verificar si la ruta ya existe
             if 'name' in data:
                 routes = load_data(ROUTES_FILE)
                 if any(route.get('name') == data['name'] for route in routes):
                     return jsonify({"error": f"Ya existe una ruta con el nombre '{data['name']}'"}), 400
             
-            # Asignar valores por defecto si no están presentes
-            if 'created_at' not in data:
-                data['created_at'] = datetime.now().isoformat()
-            if 'name' not in data:
-                data['name'] = 'Nueva Ruta'
+            # Crear el grafo
+            route_graph = Graph()
+            points = data['points']
+            
+            # Añadir nodos
+            for point in points:
+                route_graph.add_node(point['nodeName'])
+            
+            # Calcular distancias entre nodos consecutivos
+            for i in range(len(points)-1):
+                node1 = points[i]
+                node2 = points[i+1]
                 
-            if 'estimatedTime' in data and 'duration' not in data:
-                data['duration'] = data['estimatedTime']
+                # Usar OpenRouteService para distancia real
+                coord1 = [node1['lng'], node1['lat']]
+                coord2 = [node2['lng'], node2['lat']]
+                distance = get_ors_distance(coord1, coord2, OPENROUTE_API_KEY)
                 
+                route_graph.add_edge(node1['nodeName'], node2['nodeName'], weight=distance)
+            
+            # Calcular distancia total
+            total_distance = sum(
+                route_graph.graph[points[i]['nodeName']][points[i+1]['nodeName']]
+                for i in range(len(points)-1)
+            )
+            
+            # Preparar respuesta
+            response_data = {
+                "name": data.get('name', 'Nueva Ruta'),
+                "description": data.get('description', ''),
+                "difficulty": data.get('difficulty', 1),
+                "popularity": data.get('popularity', 1),
+                "points": points,
+                "graph": {node: dict(edges) for node, edges in route_graph.graph.items()},
+                "distance": total_distance,
+                "estimatedTime": data.get('estimatedTime'),
+                "duration": data.get('estimatedTime'),
+                "created_at": datetime.now().isoformat()
+            }
+            
+            # Guardar en archivo
             routes = load_data(ROUTES_FILE)
-            routes.append(data)
+            routes.append(response_data)
             save_data(routes, ROUTES_FILE)
             
-            return jsonify({"success": True, "data": data}), 201
+            return jsonify({"success": True, "data": response_data}), 201
         
         except Exception as e:
             return jsonify({"error": str(e)}), 500
-    
 
 def _build_cors_preflight_response():
     response = jsonify({"message": "Preflight OK"})
