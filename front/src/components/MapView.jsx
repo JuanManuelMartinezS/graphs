@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import PointModal from './PointModal';
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Modal from './Modal';
+import PointModal from './PointModal';
 
 const API_BASE = 'http://localhost:5000';
 const OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e36589d';
@@ -105,7 +105,7 @@ const MapView = forwardRef((props, ref) => {
           elevation: false,
           instructions: false,
           preference: 'recommended',
-          units: 'km'
+          units: 'm'
         })
       });
 
@@ -114,6 +114,7 @@ const MapView = forwardRef((props, ref) => {
       }
 
       const data = await response.json();
+      
       const routeGeometry = data.features[0].geometry;
 
       const routeLayer = L.geoJSON(routeGeometry, {
@@ -136,7 +137,7 @@ const MapView = forwardRef((props, ref) => {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
               <div style="background-color: #f3f4f6; padding: 8px; border-radius: 4px;">
                 <p style="font-size: 12px; font-weight: 500; color: #4b5563; margin: 0;">Distancia</p>
-                <p style="font-size: 16px; font-weight: bold; margin: 0;">${routeData.distance} km</p>
+                <p style="font-size: 16px; font-weight: bold; margin: 0;">${routeData.distance} m</p>
               </div>
               <div style="background-color: #f3f4f6; padding: 8px; border-radius: 4px;">
                 <p style="font-size: 12px; font-weight: 500; color: #4b5563; margin: 0;">Tiempo estimado</p>

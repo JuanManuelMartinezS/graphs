@@ -180,7 +180,7 @@ function AddRoutePage() {
           elevation: false,
           instructions: true,  // ← Cambiado a true para obtener los segmentos
           geometry: true,
-          units: 'km'
+          units: 'm'
         })
       });
 
@@ -205,13 +205,15 @@ function AddRoutePage() {
   
       routeLineRef.current = routeLine;
   
-      // Extraer información de la ruta
-      const distance = data.features[0].properties.summary.distance; // en km
+      // Extraer información de la ruta (ya viene en metros desde el backend)
+      const distance = data.features[0].properties.summary.distance; // en metros
+      console.log(distance);
+      
       const duration = data.features[0].properties.summary.duration; // en segundos
-  
+
       // Guardar distancia y tiempo
       setRouteDistance({
-        distance: distance.toFixed(2),
+        distance: Math.round(distance), // Redondear a entero
         time: Math.round(duration / 60) // convertir a minutos
       });
   
@@ -244,56 +246,58 @@ function AddRoutePage() {
   };
 
 
-  const saveRouteData = async () => {
-    try {
-      if (selectedNodes.length < 2) {
-        alert('Se necesitan al menos 2 nodos para guardar una ruta');
-        return;
-      }
-  
-      // Si no hemos calculado la ruta aún, hacerlo primero
-      if (!routeDistance) {
-        await createRoute();
-      }
-  
-      // Preparar datos para enviar al backend
-      const routeDataToSend = {
-        ...routeData,
-        points: selectedNodes.map(node => ({
-          lat: node.lat,
-          lng: node.lng,
-          nodeName: node.name
-        })),
-        difficulty: parseInt(routeData.difficulty),
-        popularity: parseInt(routeData.popularity),
-        distance: routeDistance ? parseFloat(routeDistance.distance) : null,
-        estimatedTime: routeDistance ? routeDistance.time : null
-      };
-  
-      // Enviar al backend para que calcule el grafo
-      const response = await fetch(`${API_BASE}/routes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(routeDataToSend)
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Error al guardar la ruta");
-      }
-  
-      const result = await response.json();
-      if (result.success) {
-        alert('¡Ruta guardada con éxito!');
-        navigate('/');
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      alert("Error al guardar la ruta: " + error.message);
+const saveRouteData = async () => {
+  try {
+    if (selectedNodes.length < 2) {
+      alert('Se necesitan al menos 2 nodos para guardar una ruta');
+      return;
     }
-  };
+
+    // Si no hemos calculado la ruta aún, hacerlo primero
+    if (!routeDistance) {
+      await createRoute();
+    }
+
+    console.log(routeDistance.distance);
+    
+    // Preparar datos para enviar al backend
+    const routeDataToSend = {
+      ...routeData,
+      points: selectedNodes.map(node => ({
+        lat: node.lat,
+        lng: node.lng,
+        nodeName: node.name
+      })),
+      difficulty: parseInt(routeData.difficulty),
+      popularity: parseInt(routeData.popularity),
+      distance: routeDistance ? parseFloat(routeDistance.distance) : null,
+      estimatedTime: routeDistance ? routeDistance.time : null
+    };
+
+    // Enviar al backend para que calcule el grafo
+    const response = await fetch(`${API_BASE}/routes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(routeDataToSend)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Error al guardar la ruta");
+    }
+
+    const result = await response.json();
+    if (result.success) {
+      alert('¡Ruta guardada con éxito!');
+      navigate('/');
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    alert("Error al guardar la ruta: " + error.message);
+  }
+};
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
@@ -367,7 +371,7 @@ function AddRoutePage() {
           
           {routeDistance && (
             <div className="my-2 p-2 bg-gray-800 rounded">
-              <p className="text-sm">Distancia: {routeDistance.distance} km</p>
+              <p className="text-sm">Distancia: {routeDistance.distance} m</p>
               <p className="text-sm">Tiempo est.: {routeDistance.time} min</p>
             </div>
           )}

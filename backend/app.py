@@ -53,9 +53,8 @@ def haversine(lon1, lat1, lon2, lat2):
     r = 6371  # Radio de la Tierra en kilómetros
     return c * r
 
-# Reemplazar la función haversine por esta nueva función que usa ORS
 def get_ors_distance(coords1, coords2, api_key):
-    """Obtiene la distancia entre dos puntos usando OpenRouteService"""
+    """Obtiene la distancia entre dos puntos usando OpenRouteService (devuelve metros)"""
     url = "https://api.openrouteservice.org/v2/directions/foot-walking"
     headers = {
         'Authorization': api_key,
@@ -75,11 +74,12 @@ def get_ors_distance(coords1, coords2, api_key):
         
         data = response.json()
         distance = data['features'][0]['properties']['segments'][0]['distance']  # en metros
-        return distance
+        return int(round(distance))  # Redondear a 3 decimales
     except Exception as e:
         print(f"Error al obtener distancia de ORS: {str(e)}")
-        # Fallback a Haversine si ORS falla
-        return haversine(coords1[0], coords1[1], coords2[0], coords2[1])
+        # Fallback a Haversine (convertir a metros y redondear)
+        haversine_distance = haversine(coords1[0], coords1[1], coords2[0], coords2[1])  # en km
+        return int(round(haversine_distance * 1000))  # Convertir a metros y redondear
 
 @app.route('/')
 def home():
@@ -230,6 +230,7 @@ def handle_routes():
                 route_graph.add_node(point['nodeName'])
             
             # Calcular distancias entre nodos consecutivos
+            edge_distances = []
             for i in range(len(points)-1):
                 node1 = points[i]
                 node2 = points[i+1]
@@ -239,14 +240,52 @@ def handle_routes():
                 coord2 = [node2['lng'], node2['lat']]
                 distance = get_ors_distance(coord1, coord2, OPENROUTE_API_KEY)
                 
+                edge_distances.append(distance)
                 route_graph.add_edge(node1['nodeName'], node2['nodeName'], weight=distance)
             
-            # Calcular distancia total
-            total_distance = sum(
-                route_graph.graph[points[i]['nodeName']][points[i+1]['nodeName']]
-                for i in range(len(points)-1)
-            )
+            # Obtener la distancia total del frontend si está disponible
+            frontend_total = data.get('distance')
             
+            # Si tenemos la distancia total del frontend y es diferente de la suma,
+            # ajustamos proporcionalmente las distancias de los segmentos
+            if frontend_total and edge_distances:
+                edges_sum = sum(edge_distances)
+                
+                # Solo ajustamos si hay una diferencia significativa
+                if abs(edges_sum - frontend_total) > 1:  # tolerancia de 1 metro
+                    # Factor de ajuste
+                    adjustment_factor = frontend_total / edges_sum
+                    
+                    # Ajustar las distancias de las aristas y reconstruir el grafo
+                    route_graph = Graph()  # Reiniciar el grafo
+                    
+                    # Añadir nodos nuevamente
+                    for point in points:
+                        route_graph.add_node(point['nodeName'])
+                    
+                    # Añadir aristas con distancias ajustadas
+                    for i in range(len(points)-1):
+                        node1 = points[i]
+                        node2 = points[i+1]
+                        
+                        # Aplicar el factor de ajuste a cada distancia
+                        adjusted_distance = int(round(edge_distances[i] * adjustment_factor))
+                        route_graph.add_edge(node1['nodeName'], node2['nodeName'], weight=adjusted_distance)
+                        
+                        # Actualizar el array de distancias para comprobación
+                        edge_distances[i] = adjusted_distance
+                
+                # Usar la distancia del frontend como valor oficial
+                total_distance = int(round(frontend_total))
+            else:
+                # Si no tenemos la distancia del frontend, usamos la suma
+                total_distance = sum(edge_distances)
+            
+            # Convertir el grafo a metros enteros
+            graph_dict = {}
+            for node, edges in route_graph.graph.items():
+                graph_dict[node] = {neighbor: int(round(weight)) for neighbor, weight in edges.items()}
+                
             # Preparar respuesta
             response_data = {
                 "name": data.get('name', 'Nueva Ruta'),
