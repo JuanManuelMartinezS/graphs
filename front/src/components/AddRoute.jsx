@@ -77,7 +77,7 @@ function AddRoutePage() {
 
   const renderNodes = () => {
     if (!mapInstance.current) return;
-
+  
     // Limpiar los marcadores existentes
     markersRef.current.forEach(marker => {
       if (marker && mapInstance.current) {
@@ -86,30 +86,50 @@ function AddRoutePage() {
       }
     });
     markersRef.current = [];
-
+  
     nodes.forEach(node => {
       const isSelected = selectedNodes.some(selectedNode => selectedNode.name === node.name);
       
-      let markerColor;
-      switch(node.risk) {
-        case 1: markerColor = 'green'; break;
-        case 2: markerColor = 'blue'; break;
-        case 3: markerColor = 'yellow'; break;
-        case 4: markerColor = 'orange'; break;
-        case 5: markerColor = 'red'; break;
-        default: markerColor = 'blue';
+      let customIcon;
+      
+      if (node.type === 'interest') {
+        // Icono para puntos de interés (usando un ícono de estrella)
+        const size = isSelected ? '25px' : '20px';
+        const borderStyle = isSelected ? '3px solid purple' : '2px solid white';
+        
+        customIcon = L.divIcon({
+          className: `custom-marker ${isSelected ? 'selected' : ''}`,
+          html: `<div style="background-color: purple; width: ${size}; height: ${size}; border-radius: 50%; border: ${borderStyle}; display: flex; justify-content: center; align-items: center;">
+                   <span style="color: white; font-size: 12px;">★</span>
+                 </div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        });
+      } else {
+        // Icono para puntos de control (con número de riesgo)
+        let markerColor;
+        switch(node.risk) {
+          case 1: markerColor = 'green'; break;
+          case 2: markerColor = 'blue'; break;
+          case 3: markerColor = 'yellow'; break;
+          case 4: markerColor = 'orange'; break;
+          case 5: markerColor = 'red'; break;
+          default: markerColor = 'blue';
+        }
+        
+        const size = isSelected ? '25px' : '20px';
+        const borderStyle = isSelected ? '3px solid purple' : '2px solid white';
+        
+        customIcon = L.divIcon({
+          className: `custom-marker ${isSelected ? 'selected' : ''}`,
+          html: `<div style="background-color: ${markerColor}; width: ${size}; height: ${size}; border-radius: 50%; border: ${borderStyle}; display: flex; justify-content: center; align-items: center;">
+                   <span style="color: white; font-size: 10px; font-weight: bold;">${node.risk}</span>
+                 </div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        });
       }
-
-      const borderStyle = isSelected ? '3px solid purple' : '2px solid white';
-      const size = isSelected ? '25px' : '20px';
-
-      const customIcon = L.divIcon({
-        className: `custom-marker ${isSelected ? 'selected' : ''}`,
-        html: `<div style="background-color: ${markerColor}; width: ${size}; height: ${size}; border-radius: 50%; border: ${borderStyle}; cursor: pointer;"></div>`,
-        iconSize: [30, 30],
-        iconAnchor: [15, 15]
-      });
-
+  
       const marker = L.marker([node.lat, node.lng], { 
         icon: customIcon,
         zIndexOffset: isSelected ? 1000 : 0
@@ -118,12 +138,13 @@ function AddRoutePage() {
       .bindPopup(`
         <b>${node.name || 'Sin nombre'}</b><br>
         ${node.description || 'Sin descripción'}<br>
-        Riesgo: ${node.risk}<br>
+        Tipo: ${node.type === 'control' ? 'Punto de control' : 'Punto de interés'}<br>
+        ${node.type === 'control' ? `Riesgo: ${node.risk}<br>` : ''}
         <small>${node.lat.toFixed(4)}, ${node.lng.toFixed(4)}</small>
       `);
-
+  
       marker.on('click', () => toggleNodeSelection(node));
-
+  
       markersRef.current.push(marker);
     });
   };
