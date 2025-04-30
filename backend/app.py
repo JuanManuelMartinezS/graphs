@@ -220,6 +220,12 @@ def handle_routes():
                 routes = load_data(ROUTES_FILE)
                 if any(route.get('name') == data['name'] for route in routes):
                     return jsonify({"error": f"Ya existe una ruta con el nombre '{data['name']}'"}), 400
+
+             # Sumatoria de riesgo de los nodos
+            risk_sum = 0
+            for point in points:
+                if 'risk' in point:
+                    risk_sum += int(point['risk'])
             
             # Crear el grafo
             route_graph = Graph()
@@ -297,6 +303,7 @@ def handle_routes():
                 "distance": total_distance,
                 "estimatedTime": data.get('estimatedTime'),
                 "duration": data.get('estimatedTime'),
+                "risk": risk_sum,
                 "created_at": datetime.now().isoformat()
             }
             

@@ -17,6 +17,7 @@ const MapView = forwardRef((props, ref) => {
   const [pointData, setPointData] = useState({
     name: '',
     description: '',
+    type: 'control', // 'control' o 'interest'
     risk: '1'
   });
   const [selectedRoute, setSelectedRoute] = useState(null);
@@ -151,6 +152,10 @@ const MapView = forwardRef((props, ref) => {
                 <p style="font-size: 12px; font-weight: 500; color: #4b5563; margin: 0;">Popularidad</p>
                 <p style="font-size: 16px; font-weight: bold; margin: 0;">${routeData.popularity || 'N/A'}/5</p>
               </div>
+              <div style="background-color: #f3f4f6; padding: 8px; border-radius: 4px;">
+                <p style="font-size: 12px; font-weight: 500; color: #4b5563; margin: 0;">Riesgo</p>
+                <p style="font-size: 16px; font-weight: bold; margin: 0;">${routeData.risk || 'N/A'}/5</p>
+              </div>
             </div>
             
             <p style="font-size: 13px; font-weight: 500; color: #4b5563; margin-bottom: 4px;">Puntos de la ruta:</p>
@@ -258,24 +263,36 @@ const MapView = forwardRef((props, ref) => {
 
   const handleAddPoint = async () => {
     try {
-      if (!pointData.name || !pointData.description || !pointData.risk || !clickedPosition) {
+      if (!pointData.name || !pointData.description || !clickedPosition) {
         alert("Por favor complete todos los campos requeridos");
         return;
       }
       
+      // Validar que los puntos de control tengan nivel de riesgo
+      if (pointData.type === 'control' && !pointData.risk) {
+        alert("Los puntos de control deben tener un nivel de riesgo");
+        return;
+      }
+      
+      const pointPayload = {
+        lat: clickedPosition.lat,
+        lng: clickedPosition.lng,
+        name: pointData.name,
+        description: pointData.description,
+        type: pointData.type
+      };
+      
+      // Solo agregar riesgo si es punto de control
+      if (pointData.type === 'control') {
+        pointPayload.risk = parseInt(pointData.risk);
+      }
       
       const response = await fetch(`${API_BASE}/nodes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          lat: clickedPosition.lat,
-          lng: clickedPosition.lng,
-          name: pointData.name,
-          description: pointData.description,
-          risk: parseInt(pointData.risk)
-        })
+        body: JSON.stringify(pointPayload)
       });
 
       if (!response.ok) {
@@ -296,10 +313,12 @@ const MapView = forwardRef((props, ref) => {
       setPointData({
         name: '',
         description: '',
+        type: 'control',
         risk: '1'
       });
     }
   };
+
 
   const handleDeleteNode = async (nodeName) => {
     try {
@@ -373,55 +392,75 @@ const MapView = forwardRef((props, ref) => {
   const loadNodes = async () => {
     try {
       if (!mapInstance.current) return;
-
+  
       markersRef.current.forEach(marker => {
         if (marker && mapInstance.current) {
           marker.remove();
         }
       });
       markersRef.current = [];
-
+  
       const response = await fetch(`${API_BASE}/nodes`);
       if (!response.ok) throw new Error("Error en la respuesta del servidor");
-
+  
       const nodes = await response.json();
       nodes.forEach(node => {
-        let markerColor;
-        switch(node.risk) {
-          case 1: markerColor = 'green'; break;
-          case 2: markerColor = 'blue'; break;
-          case 3: markerColor = 'yellow'; break;
-          case 4: markerColor = 'orange'; break;
-          case 5: markerColor = 'red'; break;
-          default: markerColor = 'blue';
+        let customIcon;
+        
+        if (node.type === 'interest') {
+          // Icono para puntos de interés (usando un ícono de estrella)
+          customIcon = L.divIcon({
+            className: 'custom-marker',
+            html: `<div style="background-color: purple; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; display: flex; justify-content: center; align-items: center;">
+                     <span style="color: white; font-size: 12px;">★</span>
+                   </div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+          });
+        } else {
+          // Icono para puntos de control (con número de riesgo)
+          let markerColor;
+          switch(node.risk) {
+            case 1: markerColor = 'green'; break;
+            case 2: markerColor = 'blue'; break;
+            case 3: markerColor = 'yellow'; break;
+            case 4: markerColor = 'orange'; break;
+            case 5: markerColor = 'red'; break;
+            default: markerColor = 'blue';
+          }
+          
+          customIcon = L.divIcon({
+            className: 'custom-marker',
+            html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; display: flex; justify-content: center; align-items: center;">
+                     <span style="color: white; font-size: 10px; font-weight: bold;">${node.risk}</span>
+                   </div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+          });
         }
-
-        const customIcon = L.divIcon({
-          className: 'custom-marker',
-          html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>`,
-          iconSize: [24, 24],
-          iconAnchor: [12, 12]
-        });
-
+  
         if (mapInstance.current) {
+          const popupContent = `
+            <div style="min-width: 200px;">
+              <b>${node.name}</b><br>
+              ${node.description}<br>
+              Tipo: ${node.type === 'control' ? 'Punto de control' : 'Punto de interés'}<br>
+              ${node.type === 'control' ? `Riesgo: ${node.risk}<br>` : ''}
+              <small>${node.lat.toFixed(4)}, ${node.lng.toFixed(4)}</small>
+              <div style="margin-top: 10px; text-align: center;">
+                <button 
+                  onclick="window.dispatchEvent(new CustomEvent('deleteNode', { detail: '${node.name}' }))"
+                  style="padding: 5px 10px; background-color: #ef4444; color: white; border-radius: 4px; border: none; cursor: pointer;"
+                >
+                  Eliminar Punto
+                </button>
+              </div>
+            </div>
+          `;
+  
           const marker = L.marker([node.lat, node.lng], {icon: customIcon})
             .addTo(mapInstance.current)
-            .bindPopup(`
-              <div style="min-width: 200px;">
-                <b>${node.name}</b><br>
-                ${node.description}<br>
-                Riesgo: ${node.risk}<br>
-                <small>${node.lat.toFixed(4)}, ${node.lng.toFixed(4)}</small>
-                <div style="margin-top: 10px; text-align: center;">
-                  <button 
-                    onclick="window.dispatchEvent(new CustomEvent('deleteNode', { detail: '${node.name}' }))"
-                    style="padding: 5px 10px; background-color: #ef4444; color: white; border-radius: 4px; border: none; cursor: pointer;"
-                  >
-                    Eliminar Punto
-                  </button>
-                </div>
-              </div>
-            `);
+            .bindPopup(popupContent);
           
           marker.on('popupopen', () => {
             setSelectedNode(node);
@@ -502,11 +541,23 @@ const MapView = forwardRef((props, ref) => {
           setMode('view');
         }}
         onSubmit={handleAddPoint}
-    
-        disableSubmit={!pointData.name || !pointData.description || !pointData.risk || !clickedPosition}
+        disableSubmit={!pointData.name || !pointData.description || !clickedPosition || 
+                      (pointData.type === 'control' && !pointData.risk)}
       >
         <h2 className="text-xl font-bold mb-4">Añadir nuevo punto</h2>
         <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Tipo de punto</label>
+            <select
+              className="w-full p-2 border rounded"
+              value={pointData.type}
+              onChange={(e) => setPointData({...pointData, type: e.target.value, risk: e.target.value === 'control' ? pointData.risk : ''})}
+              required
+            >
+              <option value="control">Punto de control</option>
+              <option value="interest">Punto de interés</option>
+            </select>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Nombre</label>
             <input
@@ -526,21 +577,23 @@ const MapView = forwardRef((props, ref) => {
               required
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Nivel de riesgo (1-5)</label>
-            <select
-              className="w-full p-2 border rounded"
-              value={pointData.risk}
-              onChange={(e) => setPointData({...pointData, risk: e.target.value})}
-              required
-            >
-              <option value="1">1 - Muy bajo</option>
-              <option value="2">2 - Bajo</option>
-              <option value="3">3 - Medio</option>
-              <option value="4">4 - Alto</option>
-              <option value="5">5 - Muy alto</option>
-            </select>
-          </div>
+          {pointData.type === 'control' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Nivel de riesgo (1-5)</label>
+              <select
+                className="w-full p-2 border rounded"
+                value={pointData.risk}
+                onChange={(e) => setPointData({...pointData, risk: e.target.value})}
+                required={pointData.type === 'control'}
+              >
+                <option value="1">1 - Muy bajo</option>
+                <option value="2">2 - Bajo</option>
+                <option value="3">3 - Medio</option>
+                <option value="4">4 - Alto</option>
+                <option value="5">5 - Muy alto</option>
+              </select>
+            </div>
+          )}
           <div className="text-sm text-gray-500">
             <p>Coordenadas:</p>
             <p>Latitud: {clickedPosition?.lat.toFixed(6)}</p>

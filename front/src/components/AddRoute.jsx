@@ -266,7 +266,9 @@ const saveRouteData = async () => {
       points: selectedNodes.map(node => ({
         lat: node.lat,
         lng: node.lng,
-        nodeName: node.name
+        nodeName: node.name,
+        risk: node.risk,
+        type : node.type
       })),
       difficulty: parseInt(routeData.difficulty),
       popularity: parseInt(routeData.popularity),
