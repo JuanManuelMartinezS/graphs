@@ -223,10 +223,12 @@ def handle_routes():
 
              # Sumatoria de riesgo de los nodos
             risk_sum = 0
+            cantidad_riesgo = 0
             for point in data['points']:
                 if 'risk' in point:
                     risk_sum += int(point['risk'])
-            risk_sum = risk_sum / len(data['points']) if data['points'] else 0
+                    cantidad_riesgo += 1
+            risk_sum = risk_sum / cantidad_riesgo if cantidad_riesgo > 0 else 0
 
 
             # Crear el grafo
