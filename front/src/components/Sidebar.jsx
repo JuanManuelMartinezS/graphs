@@ -1,22 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import RutaPersonalizada from '../sugerenciasRutas/RutaPersonalizada';
 
-function Sidebar({ onAddPoint, onCreateRoute, routes }) {
+function Sidebar({ onAddPoint, onCreateRoute, routes, onRouteSelected }) {
   const [showRutaPersonalizada, setShowRutaPersonalizada] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState(null);
 
-  const handleRouteSelected = (route) => {
-    setSelectedRoute(route);
-    // Aquí puedes agregar lógica adicional para resaltar la ruta en el mapa
-  };
-  useEffect(() => {
-    if (selectedRoute) {
-      // Aquí deberías tener acceso a la referencia del mapa
-      // o disparar un evento para resaltar la ruta
-      console.log("Ruta seleccionada:", selectedRoute);
-      // Ejemplo: mapRef.current.highlightRoute(selectedRoute);
+  const handleRouteSelected = (routeName) => {
+    // Buscar la ruta completa por nombre
+    const route = routes.find(r => r.name === routeName);
+    if (route) {
+      setSelectedRoute(route);
+      // Pasar la ruta seleccionada al componente padre
+      onRouteSelected(routeName);
     }
-  }, [selectedRoute]);
+  };
 
   return (
     <div className="w-64 bg-gray-700 text-white p-4 space-y-2 overflow-y-auto h-full">

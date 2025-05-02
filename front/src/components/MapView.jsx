@@ -70,6 +70,13 @@ useImperativeHandle(ref, () => ({
         if (layer !== routeLayer && layer.isPopupOpen()) {
           layer.closePopup();
         }
+        
+        // Restaurar el estilo original a todas las rutas
+        layer.setStyle({
+          color: '#0066ff',
+          weight: 5,
+          opacity: 0.8
+        });
       });
       
       // Abrir popup de la ruta seleccionada
@@ -81,19 +88,17 @@ useImperativeHandle(ref, () => ({
         animate: true
       });
       
-      // Resaltar la ruta
+      // Resaltar la ruta seleccionada con color rojo y mayor grosor
       routeLayer.setStyle({
         color: '#ff0000',
-        weight: 6
+        weight: 20,
+        opacity: 10
       });
       
-      // Restaurar estilo después de 5 segundos
-      setTimeout(() => {
-        routeLayer.setStyle({
-          color: '#0066ff',
-          weight: 5
-        });
-      }, 5000);
+      // Marcar esta ruta como destacada
+      routeLayersRef.current.forEach(layer => {
+        layer.highlighted = (layer === routeLayer);
+      });
     }
   }
 }));

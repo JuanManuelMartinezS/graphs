@@ -39,13 +39,14 @@ function App() {
         onAddPoint={handleAddPoint}
         onCreateRoute={handleCreateRoute}
         routes={routes}
+        onRouteSelected={handleRouteSelected}
       />
       <div className="flex flex-col flex-1">
         <Topbar onClearRoute={handleClearRoute} />
         <div className="flex-1 relative">
           <MapView 
             ref={mapViewRef} 
-            onRoutesLoaded={handleRoutesLoaded}  // ← Pasa la prop aquí
+            onRoutesLoaded={handleRoutesLoaded}
           />
         </div>
       </div>

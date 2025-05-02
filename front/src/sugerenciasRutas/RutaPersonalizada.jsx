@@ -8,11 +8,13 @@ function RutaPersonalizada({ isOpen, onClose, routes, onRouteSelected }) {
   const [suggestedRoute, setSuggestedRoute] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [selectionSuccess, setSelectionSuccess] = useState(false);
 
   const findBestRoute = () => {
     setLoading(true);
     setSuggestedRoute(null);
     setError(null);
+    setSelectionSuccess(false);
 
     setTimeout(() => {
       try {
@@ -36,11 +38,9 @@ function RutaPersonalizada({ isOpen, onClose, routes, onRouteSelected }) {
         }
 
         const bestRoute = [...eligibleRoutes].sort((a, b) => {
-          // Primero por proximidad a la distancia deseada
           const diffA = Math.abs(a.distance - distance);
           const diffB = Math.abs(b.distance - distance);
           
-          // Segundo por menor riesgo
           if (diffA === diffB) {
             return a.risk - b.risk;
           }
@@ -57,27 +57,22 @@ function RutaPersonalizada({ isOpen, onClose, routes, onRouteSelected }) {
     }, 100);
   };
 
-   const handleSelectRoute = () => {
+  const handleSelectRoute = () => {
     if (suggestedRoute) {
       onRouteSelected(suggestedRoute.name);
-      onClose();
-      
-      // Feedback visual inmediato en el modal
-      setSuggestedRoute(prev => ({
-        ...prev,
-        selected: true
-      }));
+      setSelectionSuccess(true);
       
       setTimeout(() => {
-        setSuggestedRoute(null);
-      }, 1000);
+        setSelectionSuccess(false);
+        onClose();
+      }, 800);
     }
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
-      <div className="p-4 max-w-md mx-auto">
-        <h2 className="text-xl font-bold mb-4 text-center">Sugerencia de Ruta</h2>
+      <div className="p-4 max-w-md mx-auto bg-white rounded-lg">
+        <h2 className="text-xl text-gray-800 font-bold mb-4 text-center">Sugerencia de Ruta</h2>
         
         <div className="space-y-4">
           <div>
@@ -101,7 +96,7 @@ function RutaPersonalizada({ isOpen, onClose, routes, onRouteSelected }) {
                   setDistance(1000);
                 }
               }}
-              className="w-full p-2 border rounded"
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
             />
           </div>
 
@@ -113,7 +108,7 @@ function RutaPersonalizada({ isOpen, onClose, routes, onRouteSelected }) {
               <select
                 value={difficulty}
                 onChange={(e) => setDifficulty(parseInt(e.target.value))}
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               >
                 {[1, 2, 3, 4, 5].map(num => (
                   <option key={num} value={num}>
@@ -130,7 +125,7 @@ function RutaPersonalizada({ isOpen, onClose, routes, onRouteSelected }) {
               <select
                 value={maxRisk}
                 onChange={(e) => setMaxRisk(parseInt(e.target.value))}
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               >
                 {[1, 2, 3, 4, 5].map(num => (
                   <option key={num} value={num}>
@@ -144,14 +139,14 @@ function RutaPersonalizada({ isOpen, onClose, routes, onRouteSelected }) {
           <div className="flex space-x-3 pt-2">
             <button
               onClick={onClose}
-              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded transition"
+              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition"
             >
               Cancelar
             </button>
             <button
               onClick={findBestRoute}
               disabled={loading}
-              className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition disabled:bg-blue-300"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition disabled:bg-blue-400"
             >
               {loading ? (
                 <span className="flex items-center justify-center">
@@ -166,55 +161,55 @@ function RutaPersonalizada({ isOpen, onClose, routes, onRouteSelected }) {
           </div>
 
           {error && (
-            <div className="p-3 bg-red-50 text-red-600 rounded text-sm">
+            <div className="p-3 bg-red-100 text-red-700 rounded-md text-sm">
               {error}
             </div>
           )}
 
-            {suggestedRoute && (
-            <div className="mt-4 p-4 border rounded bg-gray-50">
-                <h3 className="font-bold text-lg">{suggestedRoute.name}</h3>
-                <p className="text-sm text-gray-600 mb-3">{suggestedRoute.description}</p>
-                
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                <div className="bg-blue-50 p-2 rounded">
-                    <div className="text-xs text-blue-600">Distancia</div>
-                    <div className="font-bold">{suggestedRoute.distance}m</div>
+          {suggestedRoute && (
+            <div className={`mt-4 p-4 border rounded-md ${selectionSuccess ? 'bg-green-100 border-green-300' : 'bg-white border-gray-200'}`}>
+              <h3 className="font-bold text-lg text-gray-800">{suggestedRoute.name}</h3>
+              <p className="text-sm text-gray-600 mb-3">{suggestedRoute.description}</p>
+              
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="bg-blue-100 p-2 rounded-md">
+                  <div className="text-xs text-blue-800">Distancia</div>
+                  <div className="font-bold text-gray-800">{suggestedRoute.distance}m</div>
                 </div>
-                <div className="bg-green-50 p-2 rounded">
-                    <div className="text-xs text-green-600">Dificultad</div>
-                    <div className="font-bold">{suggestedRoute.difficulty}/5</div>
+                <div className="bg-green-100 p-2 rounded-md">
+                  <div className="text-xs text-green-800">Dificultad</div>
+                  <div className="font-bold text-gray-800">{suggestedRoute.difficulty}/5</div>
                 </div>
-                <div className="bg-yellow-50 p-2 rounded">
-                    <div className="text-xs text-yellow-600">Riesgo</div>
-                    <div className="font-bold">{suggestedRoute.risk.toFixed(1)}/5</div>
+                <div className="bg-yellow-100 p-2 rounded-md">
+                  <div className="text-xs text-yellow-800">Riesgo</div>
+                  <div className="font-bold text-gray-800">{suggestedRoute.risk.toFixed(1)}/5</div>
                 </div>
-                <div className="bg-purple-50 p-2 rounded">
-                    <div className="text-xs text-purple-600">Duración</div>
-                    <div className="font-bold">{suggestedRoute.duration} min</div>
+                <div className="bg-purple-100 p-2 rounded-md">
+                  <div className="text-xs text-purple-800">Duración</div>
+                  <div className="font-bold text-gray-800">{suggestedRoute.duration} min</div>
                 </div>
-                </div>
+              </div>
 
-                <div className="text-xs mb-3">
+              <div className="text-xs mb-3 text-gray-700">
                 <span className="font-semibold">Puntos:</span>
                 <ul className="list-disc list-inside">
-                    {suggestedRoute.points?.slice(0, 3).map((point, i) => (
+                  {suggestedRoute.points?.slice(0, 3).map((point, i) => (
                     <li key={i}>{point.nodeName}</li>
-                    ))}
-                    {suggestedRoute.points?.length > 3 && (
+                  ))}
+                  {suggestedRoute.points?.length > 3 && (
                     <li>...y {suggestedRoute.points.length - 3} más</li>
-                    )}
+                  )}
                 </ul>
-                </div>
+              </div>
 
-                <button
+              <button
                 onClick={handleSelectRoute}
-                className="w-full mt-2 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded"
-                >
-                Seleccionar esta ruta
-                </button>
+                className={`w-full mt-2 ${selectionSuccess ? 'bg-green-600' : 'bg-green-500 hover:bg-green-600'} text-white py-2 px-4 rounded-md transition`}
+              >
+                {selectionSuccess ? '¡Ruta seleccionada!' : 'Seleccionar esta ruta'}
+              </button>
             </div>
-            )}
+          )}
         </div>
       </div>
     </Modal>
