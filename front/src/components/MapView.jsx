@@ -60,47 +60,56 @@ useImperativeHandle(ref, () => ({
     }
   },
   showRoutePopup: (routeName) => {
-    const routeLayer = routeLayersRef.current.find(
-      layer => layer.routeData?.name === routeName
-    );
-    
-    if (routeLayer) {
-      // Cerrar otros popups primero
-      routeLayersRef.current.forEach(layer => {
-        if (layer !== routeLayer && layer.isPopupOpen()) {
-          layer.closePopup();
-        }
-        
-        // Restaurar el estilo original a todas las rutas
+    // 1. Validar que el mapa existe
+    if (!mapInstance.current) return;
+
+    // 2. Restaurar todas las rutas a su estado normal
+    routeLayersRef.current.forEach(layer => {
+      if (!layer || !mapInstance.current.hasLayer(layer)) return;
+      
+      // Solo modificar si estaba resaltada
+      if (layer.highlighted) {
         layer.setStyle({
           color: '#0066ff',
           weight: 5,
           opacity: 0.8
         });
+        layer.highlighted = false;
+      }
+      
+      // Cerrar popups abiertos
+      if (layer.isPopupOpen()) {
+        layer.closePopup();
+      }
+    });
+
+    // 3. Encontrar y resaltar la nueva ruta
+    const routeLayer = routeLayersRef.current.find(
+      layer => layer && layer.routeData?.name === routeName
+    );
+
+    if (routeLayer) {
+      // Aplicar nuevo estilo
+      routeLayer.setStyle({
+        color: '#ff0000',
+        weight: 7,
+        opacity: 1
       });
       
-      // Abrir popup de la ruta seleccionada
-      routeLayer.openPopup();
+      // Marcar como resaltada
+      routeLayer.highlighted = true;
       
-      // Centrar el mapa en la ruta
-      mapInstance.current?.fitBounds(routeLayer.getBounds(), {
+      // Abrir popup y centrar vista
+      routeLayer.openPopup();
+      mapInstance.current.fitBounds(routeLayer.getBounds(), {
         padding: [50, 50],
         animate: true
       });
       
-      // Resaltar la ruta seleccionada con color rojo y mayor grosor
-      routeLayer.setStyle({
-        color: '#ff0000',
-        weight: 20,
-        opacity: 10
-      });
-      
-      // Marcar esta ruta como destacada
-      routeLayersRef.current.forEach(layer => {
-        layer.highlighted = (layer === routeLayer);
-      });
+      // Traer al frente
+      routeLayer.bringToFront();
     }
-  }
+  } 
 }));
 
   useEffect(() => {
@@ -194,7 +203,9 @@ useImperativeHandle(ref, () => ({
           opacity: 0.8
         }
       }).addTo(mapInstance.current);
-
+    
+      // Añadir propiedad highlighted
+      routeLayer.highlighted = false;
       routeLayer.routeData = routeData;
 
       // Changed: Create popup content for the route
@@ -300,7 +311,10 @@ useImperativeHandle(ref, () => ({
       
       for (const route of routesData) {
         if (route.points && route.points.length >= 2) {
-          await drawRoute(route.points, route);
+          const layer = await drawRoute(route.points, route);
+        if (layer) {
+          layer.highlighted = false; // Añadir esta línea
+        }
         }
       }
     } catch (error) {
