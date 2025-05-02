@@ -7,7 +7,7 @@ import PointModal from './PointModal';
 const API_BASE = 'http://localhost:5000';
 const OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e36589d';
 
-const MapView = forwardRef((props, ref) => {
+const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref)=> {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const [routePoints, setRoutePoints] = useState([]);
@@ -28,11 +28,75 @@ const MapView = forwardRef((props, ref) => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [routeToDelete, setRouteToDelete] = useState(null);
 
-  useImperativeHandle(ref, () => ({
-    setMode: (newMode) => {
-      setMode(newMode);
-    },
-  }));
+// En el useImperativeHandle de MapView
+useImperativeHandle(ref, () => ({
+  setMode: (newMode) => {
+    setMode(newMode);
+  },
+  clearRoute: () => {
+    setRoutePoints([]);
+    markersRef.current.forEach(marker => marker.remove());
+    markersRef.current = [];
+  },
+  highlightRoute: (route) => {
+    // Limpiar cualquier ruta resaltada anteriormente
+    routeLayersRef.current.forEach(layer => {
+      if (layer.highlighted) {
+        layer.setStyle({ color: '#0066ff' });
+        layer.highlighted = false;
+      }
+    });
+
+    // Encontrar y resaltar la nueva ruta
+    const routeLayer = routeLayersRef.current.find(
+      layer => layer.routeData?.name === route.name
+    );
+
+    if (routeLayer) {
+      routeLayer.setStyle({ color: '#ff0000', weight: 7 });
+      routeLayer.highlighted = true;
+      routeLayer.openPopup();
+      mapInstance.current?.fitBounds(routeLayer.getBounds());
+    }
+  },
+  showRoutePopup: (routeName) => {
+    const routeLayer = routeLayersRef.current.find(
+      layer => layer.routeData?.name === routeName
+    );
+    
+    if (routeLayer) {
+      // Cerrar otros popups primero
+      routeLayersRef.current.forEach(layer => {
+        if (layer !== routeLayer && layer.isPopupOpen()) {
+          layer.closePopup();
+        }
+      });
+      
+      // Abrir popup de la ruta seleccionada
+      routeLayer.openPopup();
+      
+      // Centrar el mapa en la ruta
+      mapInstance.current?.fitBounds(routeLayer.getBounds(), {
+        padding: [50, 50],
+        animate: true
+      });
+      
+      // Resaltar la ruta
+      routeLayer.setStyle({
+        color: '#ff0000',
+        weight: 6
+      });
+      
+      // Restaurar estilo después de 5 segundos
+      setTimeout(() => {
+        routeLayer.setStyle({
+          color: '#0066ff',
+          weight: 5
+        });
+      }, 5000);
+    }
+  }
+}));
 
   useEffect(() => {
     if (mapRef.current && !mapInstance.current) {
@@ -225,6 +289,9 @@ const MapView = forwardRef((props, ref) => {
       
       const routesData = await response.json();
       setRoutes(routesData);
+      if (onRoutesLoaded) {
+        onRoutesLoaded(routesData);
+      }
       
       for (const route of routesData) {
         if (route.points && route.points.length >= 2) {

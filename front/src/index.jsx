@@ -1,10 +1,12 @@
+import L from 'leaflet';
+import 'leaflet-routing-machine';
+import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
+import 'leaflet/dist/leaflet.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import App from './App';
+import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import AddRoutePage from '../src/components/AddRoute';
-import 'leaflet-routing-machine';
-import 'leaflet/dist/leaflet.css';
+import App from './App';
 import './style.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
