@@ -323,15 +323,35 @@ function AddRoutePage() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
-      <div className="w-64 bg-gray-500 text-white p-4 space-y-4 overflow-y-auto h-full">
-        <h2 className="text-xl font-bold">Crear Nueva Ruta</h2>
+<div className="flex h-screen w-screen overflow-hidden bg-gray-100">
+  {/* Sidebar - Panel de creación de ruta */}
+  <div className="w-80 bg-gradient-to-b from-gray-700 to-gray-800 text-white p-6 space-y-6 overflow-y-auto h-full shadow-xl">
+    <div className="flex items-center justify-between">
+      <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-blue-500">
+        Crear Nueva Ruta
+      </h2>
+      <button 
+        onClick={() => navigate('/')}
+        className="p-2 rounded-full hover:bg-gray-600 transition-colors"
+        title="Cancelar"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </button>
+    </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Nombre de la ruta *</label>
+    {/* Campos del formulario */}
+    <div className="space-y-5">
+      {/* Nombre */}
+      <div className="space-y-1">
+        <label className="block text-sm font-medium text-gray-300">Nombre de la ruta *</label>
+        <div className="relative">
           <input
             type="text"
-            className={`w-full p-2 rounded text-black border-2${errors.name ? 'border-2 border-red-500' : ''}`}
+            className={`w-full p-3 rounded-lg text-gray-800 bg-gray-100 border-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+              errors.name ? 'border-red-500' : 'border-gray-300 focus:border-blue-500'
+            }`}
             value={routeData.name}
             onChange={(e) => {
               setRouteData({ ...routeData, name: e.target.value });
@@ -339,13 +359,25 @@ function AddRoutePage() {
             }}
             required
           />
-          {errors.name && <p className="text-red-400 text-xs mt-1">Este campo es requerido</p>}
+          {errors.name && (
+            <div className="absolute right-3 top-3 text-red-500">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+          )}
         </div>
+        {errors.name && <p className="text-red-300 text-xs">Este campo es requerido</p>}
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Descripción *</label>
+      {/* Descripción */}
+      <div className="space-y-1">
+        <label className="block text-sm font-medium text-gray-300">Descripción *</label>
+        <div className="relative">
           <textarea
-            className={`w-full p-2 rounded text-black border-2${errors.description ? 'border-2 border-red-500' : ''}`}
+            className={`w-full p-3 rounded-lg text-gray-800 bg-gray-100 border-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all min-h-[100px] ${
+              errors.description ? 'border-red-500' : 'border-gray-300 focus:border-blue-500'
+            }`}
             value={routeData.description}
             onChange={(e) => {
               setRouteData({ ...routeData, description: e.target.value });
@@ -353,13 +385,23 @@ function AddRoutePage() {
             }}
             required
           />
-          {errors.description && <p className="text-red-400 text-xs mt-1">Este campo es requerido</p>}
+          {errors.description && (
+            <div className="absolute right-3 top-3 text-red-500">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+          )}
         </div>
+        {errors.description && <p className="text-red-300 text-xs">Este campo es requerido</p>}
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Dificultad (1-5)</label>
+      {/* Dificultad */}
+      <div className="space-y-1">
+        <label className="block text-sm font-medium text-gray-300">Dificultad</label>
+        <div className="relative">
           <select
-            className="w-full p-2 rounded text-black border-2"
+            className="w-full p-3 rounded-lg text-gray-800 bg-gray-100 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none transition-all"
             value={routeData.difficulty}
             onChange={(e) => setRouteData({ ...routeData, difficulty: e.target.value })}
           >
@@ -369,12 +411,24 @@ function AddRoutePage() {
             <option value="4">4 - Difícil</option>
             <option value="5">5 - Muy difícil</option>
           </select>
+          <div className="absolute right-3 top-3 text-gray-500 pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </div>
         </div>
+        <div className="flex justify-between text-xs text-gray-400 mt-1">
+          <span>Fácil</span>
+          <span>Difícil</span>
+        </div>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Popularidad (1-5)</label>
+      {/* Popularidad */}
+      <div className="space-y-1">
+        <label className="block text-sm font-medium text-gray-300">Popularidad</label>
+        <div className="relative">
           <select
-            className="w-full p-2 rounded text-black border-2"
+            className="w-full p-3 rounded-lg text-gray-800 bg-gray-100 border-2 border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none transition-all"
             value={routeData.popularity}
             onChange={(e) => setRouteData({ ...routeData, popularity: e.target.value })}
           >
@@ -384,62 +438,95 @@ function AddRoutePage() {
             <option value="4">4 - Alta</option>
             <option value="5">5 - Muy alta</option>
           </select>
+          <div className="absolute right-3 top-3 text-gray-500 pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </div>
+        </div>
+        <div className="flex justify-between text-xs text-gray-400 mt-1">
+          <span>Baja</span>
+          <span>Alta</span>
+        </div>
+      </div>
+
+      {/* Sección de nodos y acciones */}
+      <div className="pt-4 border-t border-gray-600 space-y-4">
+        <div className={`text-sm p-2 rounded-lg ${
+          errors.selectedNodes ? 'bg-red-900/30 text-red-300' : 'bg-gray-800/50 text-gray-300'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span>Nodos seleccionados:</span>
+            <span className="font-bold">{selectedNodes.length}</span>
+          </div>
+          {selectedNodes.length < 2 && (
+            <p className="mt-1 text-xs">(Se requieren al menos 2 nodos)</p>
+          )}
+          {errors.selectedNodes && (
+            <p className="mt-1 text-xs">¡Selecciona al menos 2 nodos!</p>
+          )}
         </div>
 
-        <div className="pt-2">
-          <p className={`text-sm ${errors.selectedNodes ? 'text-red-400' : ''}`}>
-            Nodos seleccionados: {selectedNodes.length} {selectedNodes.length < 2 && '(Se requieren al menos 2)'}
-          </p>
-          {errors.selectedNodes && <p className="text-red-400 text-xs">Selecciona al menos 2 nodos</p>}
-
-          {routeDistance && (
-            <div className="my-2 p-2 bg-gray-800 rounded">
-              <p className="text-sm">Distancia: {routeDistance.distance} m</p>
-              <p className="text-sm">Tiempo est.: {routeDistance.time} min</p>
+        {routeDistance && (
+          <div className="bg-gray-800/50 p-3 rounded-lg border border-gray-700">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">Distancia:</span>
+              <span className="font-medium">{routeDistance.distance} m</span>
             </div>
-          )}
+            <div className="flex justify-between text-sm mt-1">
+              <span className="text-gray-400">Tiempo estimado:</span>
+              <span className="font-medium">{routeDistance.time} min</span>
+            </div>
+          </div>
+        )}
 
+        <div className="space-y-3">
           <button
             onClick={createRoute}
             disabled={selectedNodes.length < 2}
-            className={`w-full p-2 rounded mt-2 ${selectedNodes.length < 2
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-blue-500 hover:bg-blue-600'
-              }`}
+            className={`w-full p-3 rounded-lg font-medium transition-all flex items-center justify-center space-x-2 ${
+              selectedNodes.length < 2
+                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg'
+            }`}
           >
-            Visualizar Ruta
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+            </svg>
+            <span>Visualizar Ruta</span>
           </button>
 
           <button
             onClick={saveRoute}
             disabled={!routeData.name || !routeData.description || selectedNodes.length < 2}
-            className={`w-full p-2 rounded mt-2 ${!routeData.name || !routeData.description || selectedNodes.length < 2
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-green-500 hover:bg-green-600'
-              }`}
+            className={`w-full p-3 rounded-lg font-medium transition-all flex items-center justify-center space-x-2 ${
+              !routeData.name || !routeData.description || selectedNodes.length < 2
+                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                : 'bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg'
+            }`}
           >
-            Guardar Ruta
-          </button>
-
-          <button
-            onClick={() => navigate('/')}
-            className="w-full bg-gray-500 hover:bg-gray-600 p-2 rounded mt-2"
-          >
-            Cancelar
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+            <span>Guardar Ruta</span>
           </button>
         </div>
       </div>
-
-      <div className="flex-1 relative">
-        <div ref={mapRef} className="absolute inset-0" />
-
-        {selectedNodes.length > 0 && (
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500] bg-white p-2 rounded shadow-lg">
-            Nodos seleccionados: {selectedNodes.length}
-          </div>
-        )}
-      </div>
     </div>
+  </div>
+
+  {/* Mapa */}
+  <div className="flex-1 relative">
+    <div ref={mapRef} className="absolute inset-0" />
+
+    {selectedNodes.length > 0 && (
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500] bg-white p-3 rounded-lg shadow-lg flex items-center space-x-2">
+        <span className="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></span>
+        <span className="font-medium">Nodos seleccionados: {selectedNodes.length}</span>
+      </div>
+    )}
+  </div>
+</div>
   );
 }
 

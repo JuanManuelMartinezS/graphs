@@ -124,5 +124,96 @@
         "duration": 6,
         "risk": 1.0,
         "created_at": "2025-05-03T12:54:44.535428"
+    },
+    {
+        "name": "Prueba",
+        "description": "prueba",
+        "difficulty": 4,
+        "popularity": 2,
+        "points": [
+            {
+                "lat": 5.066144135596127,
+                "lng": -75.5162698030472,
+                "nodeName": "y",
+                "risk": 1,
+                "type": "control"
+            },
+            {
+                "lat": 5.066308778636779,
+                "lng": -75.51750898361207,
+                "nodeName": "P1",
+                "type": "interest"
+            },
+            {
+                "lat": 5.066897436478597,
+                "lng": -75.51988542079927,
+                "nodeName": "r",
+                "risk": 1,
+                "type": "control"
+            }
+        ],
+        "graph": {
+            "y": {
+                "P1": 180
+            },
+            "P1": {
+                "y": 180,
+                "r": 353
+            },
+            "r": {
+                "P1": 353
+            }
+        },
+        "distance": 533,
+        "estimatedTime": 6,
+        "duration": 6,
+        "risk": 1.0,
+        "created_at": "2025-05-03T13:04:38.732538"
+    },
+    {
+        "name": "cxcxcx",
+        "description": "xcxcxcxc",
+        "difficulty": 1,
+        "popularity": 1,
+        "points": [
+            {
+                "lat": 5.066144135596127,
+                "lng": -75.5162698030472,
+                "nodeName": "y",
+                "risk": 1,
+                "type": "control"
+            },
+            {
+                "lat": 5.063201392856124,
+                "lng": -75.50933361053468,
+                "nodeName": "asas",
+                "risk": 4,
+                "type": "control"
+            },
+            {
+                "lat": 5.0620044509252144,
+                "lng": -75.50366878509521,
+                "nodeName": "dfdf",
+                "risk": 3,
+                "type": "control"
+            }
+        ],
+        "graph": {
+            "y": {
+                "asas": 1228
+            },
+            "asas": {
+                "y": 1228,
+                "dfdf": 943
+            },
+            "dfdf": {
+                "asas": 943
+            }
+        },
+        "distance": 2171,
+        "estimatedTime": 26,
+        "duration": 26,
+        "risk": 2.6666666666666665,
+        "created_at": "2025-05-03T13:05:12.962201"
     }
 ]
