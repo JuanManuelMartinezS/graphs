@@ -467,6 +467,20 @@ def get_shortest_distances():
         # Aplicar Dijkstra para obtener distancias mínimas desde el nodo inicial
         distances = graph.dijkstra(start_node_name)
         
+        # Lista de 10 colores vibrantes y distintos
+        color_palette = [
+            "#FF5733",  # Rojo anaranjado
+            "#33FF57",  # Verde brillante
+            "#3357FF",  # Azul
+            "#F033FF",  # Magenta
+            "#33FFF5",  # Cian
+            "#FF33A8",  # Rosa
+            "#B833FF",  # Púrpura
+            "#FFC733",  # Amarillo anaranjado
+            "#33FFBD",  # Verde agua
+            "#8C33FF"   # Violeta
+        ]
+        
         # Incluir todos los nodos excepto el inicial en los resultados
         all_distances = {}
         for node in nodes:
@@ -474,42 +488,20 @@ def get_shortest_distances():
             
             # Incluir todos los nodos excepto el inicial
             if node_name != start_node_name and node_name in distances:
+                # Asignar color aleatorio basado en el hash del nombre del nodo para consistencia
+                color_index = hash(node_name) % len(color_palette)
                 all_distances[node_name] = {
                     'distance': distances[node_name],
                     'lat': node['lat'],
                     'lng': node['lng'],
-                    'type': node.get('type', 'control')  # Incluir el tipo de nodo
+                    'type': node.get('type', 'control'),  # Incluir el tipo de nodo
+                    'color': color_palette[color_index]  # Asignar color de la paleta
                 }
-        
-        # Categorizar las distancias para asignar colores
-        if all_distances:
-            distances_values = [info['distance'] for info in all_distances.values()]
-            min_dist = min(distances_values)
-            max_dist = max(distances_values)
-            
-            # Crear rangos para asignar colores
-            range_size = (max_dist - min_dist) / 5 if max_dist > min_dist else 1
-            
-            # Asignar colores según el rango de distancia
-            for node_name, info in all_distances.items():
-                distance = info['distance']
-                
-                # Calcular categoría (0-4, donde 0 es más cercano y 4 más lejano)
-                if max_dist == min_dist:
-                    category = 0  # Si todas las distancias son iguales, usar una categoría
-                else:
-                    category = min(4, int((distance - min_dist) / range_size))
-                
-                # Colores por categoría
-                colors = ["#00FF00", "#88FF00", "#FFFF00", "#FF8800", "#FF0000"]  # Verde a rojo
-                
-                # Añadir color a la información del nodo
-                all_distances[node_name]['color'] = colors[category]
         
         # Preparar respuesta
         result = {
             'startNode': start_node_name,
-            'distances': all_distances,  # Ahora incluye todos los nodos
+            'distances': all_distances,
             'info': {
                 'totalNodes': len(nodes),
                 'interestNodes': sum(1 for node in nodes if node.get('type') == 'interest'),

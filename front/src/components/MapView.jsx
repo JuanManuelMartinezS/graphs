@@ -129,17 +129,21 @@ const MapView = forwardRef(({ onRoutesLoaded = () => { } }, ref) => {
       }
     },
     clearDistanceRoutes: () => {
+      // Limpiar elementos del mapa
       distanceElementsRef.current = clearDistanceElements(
         mapInstance.current, 
         distanceElementsRef.current
       );
+      
+      // Limpiar cualquier otro elemento relacionado
+      const distanceLabels = document.querySelectorAll('.distance-label');
+      distanceLabels.forEach(label => label.remove());
+      
+      const startMarkers = document.querySelectorAll('.start-node-marker');
+      startMarkers.forEach(marker => marker.remove());
+      
+      return { routes: [], markers: [], legend: null };
     },
-    startRouteSimulation: (routeName) => {
-      if (simulationManagerRef.current) {
-        return simulationManagerRef.current.startSimulation(routeName);
-      }
-      return { success: false, message: "Simulation manager not initialized" };
-    }
   }));
 
 

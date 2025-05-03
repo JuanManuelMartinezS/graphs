@@ -5,7 +5,8 @@ import ModalRutasPersonalizadas from '../sugerenciasRutas/RutasPersonalizadas';
 function Sidebar({ 
   mapViewRef, 
   onAddPoint, 
-  onCreateRoute, 
+  onCreateRoute,
+
   routes, 
   onRouteSelected 
 }) {
@@ -15,6 +16,8 @@ function Sidebar({
   const [selectedExperiencia, setSelectedExperiencia] = useState(null);
   const [showModalPersonalizada, setShowModalPersonalizada] = useState(false);
   const [showModalPersonalizada2, setShowModalPersonalizada2] = useState(false);
+  const [showClearButton, setShowClearButton] = useState(false);
+
 
   const handleMinimumDistances = async () => {
     try {
@@ -76,6 +79,7 @@ function Sidebar({
         const selectedNode = select.value;
         if (mapViewRef.current) {
           mapViewRef.current.showMinimumDistances(selectedNode);
+          setShowClearButton(true); // <-- Mostrar botón al activar
         }
         modal.remove();
       });
@@ -87,6 +91,14 @@ function Sidebar({
     } catch (error) {
       console.error("Error al seleccionar punto de interés:", error);
       alert(`Error: ${error.message}`);
+    }
+  };
+
+  
+  const handleClearDistances = () => {
+    if (mapViewRef.current) {
+      mapViewRef.current.clearDistanceRoutes();
+      setShowClearButton(false); // <-- Ocultar botón al limpiar
     }
   };
 
@@ -206,11 +218,24 @@ function Sidebar({
     </button>
 
     <button 
-      className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
-      onClick={handleMinimumDistances}
-    >
-      Recomendar distancias mínimas
+        className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
+        onClick={handleMinimumDistances}
+      >
+        Recomendar distancias mínimas
     </button>
+
+    {/* Botón de limpiar distancias (condicional) */}
+    {/* Botón de limpiar (condicional) */}
+      {showClearButton && (
+        <div className="mt-auto pt-4 border-t border-gray-600">
+          <button
+            className="w-full bg-yellow-500 hover:bg-yellow-600 p-2 rounded transition"
+            onClick={handleClearDistances}
+          >
+            Limpiar distancias
+          </button>
+        </div>
+      )}
   </div>
 
   {/* Botón "Añadir punto" fijo en la parte inferior con color morado */}

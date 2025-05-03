@@ -1,34 +1,54 @@
-import { 
-    createColoredRoute, 
-    highlightStartNode, 
-    showDistanceLegend,
-    formatDistance
+import {
+    createColoredRoute,
+    formatDistance,
+    highlightStartNode,
+    showDistanceLegend
 } from '../utils/distanceUtils';
 
-export const clearDistanceElements = (mapInstance, elements) => {
-    if (!mapInstance) return;
-    
+export function clearDistanceElements(map, elements) {
+    if (!map || !elements) return { routes: [], markers: [], legend: null };
+  
     // Limpiar rutas
-    elements.routes.forEach(route => {
-        if (route && mapInstance.hasLayer(route)) {
-            mapInstance.removeLayer(route);
+    elements.routes?.forEach(route => {
+      try {
+        if (route && map.hasLayer(route)) {
+          map.removeLayer(route);
         }
+      } catch (e) {
+        console.error("Error removing route layer:", e);
+      }
     });
-    
+  
     // Limpiar marcadores
-    elements.markers.forEach(marker => {
-        if (marker && mapInstance.hasLayer(marker)) {
-            mapInstance.removeLayer(marker);
+    elements.markers?.forEach(marker => {
+      try {
+        if (marker && map.hasLayer(marker)) {
+          map.removeLayer(marker);
         }
+      } catch (e) {
+        console.error("Error removing marker layer:", e);
+      }
     });
-    
-    // Eliminar leyenda si existe
-    if (elements.legend) {
-        elements.legend.remove();
+  
+    // Limpiar leyenda
+    try {
+      if (elements.legend && map.hasLayer(elements.legend)) {
+        map.removeLayer(elements.legend);
+      }
+    } catch (e) {
+      console.error("Error removing legend:", e);
     }
-    
+  
+    // Limpiar lista del DOM si existe
+    try {
+        const legend = document.getElementById('distance-legend');
+        if (legend) legend.remove();
+      } catch (e) {
+        console.error("Error removing legend:", e);
+      }
+  
     return { routes: [], markers: [], legend: null };
-};
+  };
 
 export const showMinimumDistances = async (mapInstance, startNodeName, API_BASE, OPENROUTE_API_KEY) => {
     try {
