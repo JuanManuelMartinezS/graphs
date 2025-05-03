@@ -459,7 +459,7 @@ def get_shortest_distances():
                     coord2 = [node2['lng'], node2['lat']]
                     
                     # Calcular distancia entre nodos
-                    distance = get_ors_distance(coord1, coord2, OPENROUTE_API_KEY)
+                    distance = round(haversine(coord1[0], coord1[1], coord2[0], coord2[1]), 2) * 1000 # en m
                     
                     # Añadir arista con su peso (distancia)
                     graph.add_edge(node1['name'], node2['name'], weight=distance)
@@ -467,24 +467,23 @@ def get_shortest_distances():
         # Aplicar Dijkstra para obtener distancias mínimas desde el nodo inicial
         distances = graph.dijkstra(start_node_name)
         
-        # Filtrar resultados para incluir solo nodos de interés (no puntos de control)
-        interest_distances = {}
+        # Incluir todos los nodos excepto el inicial en los resultados
+        all_distances = {}
         for node in nodes:
             node_name = node['name']
-            node_type = node.get('type')
             
-            # Incluir solo nodos de interés (y no el nodo inicial)
-            if node_type == 'interest' and node_name != start_node_name:
-                if node_name in distances:
-                    interest_distances[node_name] = {
-                        'distance': distances[node_name],
-                        'lat': node['lat'],
-                        'lng': node['lng']
-                    }
+            # Incluir todos los nodos excepto el inicial
+            if node_name != start_node_name and node_name in distances:
+                all_distances[node_name] = {
+                    'distance': distances[node_name],
+                    'lat': node['lat'],
+                    'lng': node['lng'],
+                    'type': node.get('type', 'control')  # Incluir el tipo de nodo
+                }
         
         # Categorizar las distancias para asignar colores
-        if interest_distances:
-            distances_values = [info['distance'] for info in interest_distances.values()]
+        if all_distances:
+            distances_values = [info['distance'] for info in all_distances.values()]
             min_dist = min(distances_values)
             max_dist = max(distances_values)
             
@@ -492,7 +491,7 @@ def get_shortest_distances():
             range_size = (max_dist - min_dist) / 5 if max_dist > min_dist else 1
             
             # Asignar colores según el rango de distancia
-            for node_name, info in interest_distances.items():
+            for node_name, info in all_distances.items():
                 distance = info['distance']
                 
                 # Calcular categoría (0-4, donde 0 es más cercano y 4 más lejano)
@@ -505,15 +504,16 @@ def get_shortest_distances():
                 colors = ["#00FF00", "#88FF00", "#FFFF00", "#FF8800", "#FF0000"]  # Verde a rojo
                 
                 # Añadir color a la información del nodo
-                interest_distances[node_name]['color'] = colors[category]
+                all_distances[node_name]['color'] = colors[category]
         
         # Preparar respuesta
         result = {
             'startNode': start_node_name,
-            'distances': interest_distances,
+            'distances': all_distances,  # Ahora incluye todos los nodos
             'info': {
                 'totalNodes': len(nodes),
-                'interestNodes': sum(1 for node in nodes if node.get('type') == 'interest')
+                'interestNodes': sum(1 for node in nodes if node.get('type') == 'interest'),
+                'controlNodes': sum(1 for node in nodes if node.get('type') == 'control')
             }
         }
         
