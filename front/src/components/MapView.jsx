@@ -3,9 +3,10 @@ import 'leaflet/dist/leaflet.css';
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Modal from './Modal';
 import PointModal from './PointModal';
+import SimulationController from './SimulationController';
 import { addNode, deleteNode, loadNodes } from '../services/nodeService';
 import { drawRoute as calculateRoute, loadRoutes, deleteRoute } from '../services/routeService';
-import { startSimulation } from '../services/simulationService';
+import { initSimulationManager, cleanupSimulationManager } from '../services/simulationManager';
 
 const API_BASE = 'http://localhost:5000';
 const OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e36589d';
@@ -13,6 +14,7 @@ const OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e365
 const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
+  const simulationManagerRef = useRef(null);
   const [routePoints, setRoutePoints] = useState([]);
   const [mode, setMode] = useState('view');
   const [clickedPosition, setClickedPosition] = useState(null);
@@ -84,6 +86,12 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
         });
         routeLayer.bringToFront();
       }
+    },
+    startRouteSimulation: (routeName) => {
+      if (simulationManagerRef.current) {
+        return simulationManagerRef.current.startSimulation(routeName);
+      }
+      return { success: false, message: "Simulation manager not initialized" };
     }
   }));
 
@@ -97,6 +105,10 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
+      // Initialize simulation manager
+      simulationManagerRef.current = initSimulationManager(map);
+      console.log('Simulation manager initialized:', simulationManagerRef.current);
+
       loadMapNodes();
       loadMapRoutes();
 
@@ -104,6 +116,12 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
     }
 
     return () => {
+      // Clean up simulation manager
+      if (simulationManagerRef.current) {
+        cleanupSimulationManager();
+        simulationManagerRef.current = null;
+      }
+      
       if (mapInstance.current) {
         mapInstance.current.off();
         mapInstance.current.remove();
@@ -125,10 +143,31 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
       }
     };
 
+    const handleSpeedInputChange = (e) => {
+      const speedInput = e.target;
+      const estimatedTimeSpan = document.getElementById('estimatedTime');
+      if (speedInput && estimatedTimeSpan) {
+        const speed = parseInt(speedInput.value) || 15;
+        const routeLayer = routeLayersRef.current.find(
+          layer => layer && layer.routeData && layer.isPopupOpen()
+        );
+        if (routeLayer) {
+          const distance = routeLayer.routeData.distance;
+          const timeHours = (distance / 1000) / speed;
+          const minutes = Math.round(timeHours * 60);
+          const hours = Math.floor(minutes / 60);
+          const remainingMinutes = minutes % 60;
+          estimatedTimeSpan.textContent = `${hours > 0 ? `${hours}h ` : ''}${remainingMinutes}m`;
+        }
+      }
+    };
+
     mapInstance.current.on('click', handleMapClick);
+    document.addEventListener('input', handleSpeedInputChange);
 
     return () => {
       if (mapInstance.current) mapInstance.current.off('click', handleMapClick);
+      document.removeEventListener('input', handleSpeedInputChange);
     };
   }, [mode]);
 
@@ -181,49 +220,28 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
 
   const createRoutePopupContent = (routeData) => {
     return `
-      <div style="min-width: 250px;">
-        <h3 style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">${routeData.name || 'Ruta sin nombre'}</h3>
-        <p style="margin-bottom: 8px;">${routeData.description || 'Sin descripción'}</p>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
-          <div style="background-color: #f3f4f6; padding: 8px; border-radius: 4px;">
-            <p style="font-size: 12px; font-weight: 500; color: #4b5563; margin: 0;">Distancia</p>
-            <p style="font-size: 16px; font-weight: bold; margin: 0;">${routeData.distance} m</p>
-          </div>
-          <div style="background-color: #f3f4f6; padding: 8px; border-radius: 4px;">
-            <p style="font-size: 12px; font-weight: 500; color: #4b5563; margin: 0;">Tiempo estimado</p>
-            <p style="font-size: 16px; font-weight: bold; margin: 0;">${routeData.duration || '0'} min</p>
-          </div>
-          <div style="background-color: #f3f4f6; padding: 8px; border-radius: 4px;">
-            <p style="font-size: 12px; font-weight: 500; color: #4b5563; margin: 0;">Dificultad</p>
-            <p style="font-size: 16px; font-weight: bold; margin: 0;">${routeData.difficulty || 'N/A'}/5</p>
-          </div>
-          <div style="background-color: #f3f4f6; padding: 8px; border-radius: 4px;">
-            <p style="font-size: 12px; font-weight: 500; color: #4b5563; margin: 0;">Popularidad</p>
-            <p style="font-size: 16px; font-weight: bold; margin: 0;">${routeData.popularity || 'N/A'}/5</p>
-          </div>
-          <div style="background-color: #f3f4f6; padding: 8px; border-radius: 4px;">
-            <p style="font-size: 12px; font-weight: 500; color: #4b5563; margin: 0;">Riesgo</p>
-            <p style="font-size: 16px; font-weight: bold; margin: 0;">${routeData.risk || 'N/A'}/5</p>
-          </div>
+      <div style="min-width: 200px;">
+        <b>${routeData.name}</b><br>
+        Distancia: ${(routeData.distance / 1000).toFixed(2)} km<br>
+        Puntos: ${routeData.points.length}<br>
+        <div style="margin-top: 10px;">
+          <label>Velocidad (km/h):</label>
+          <input type="number" id="simulationSpeed" min="5" max="100" value="15" style="width: 60px; margin-left: 5px;">
         </div>
-        <p style="font-size: 13px; font-weight: 500; color: #4b5563; margin-bottom: 4px;">Puntos de la ruta:</p>
-        <ul style="padding-left: 20px; margin-top: 0; margin-bottom: 12px;">
-          ${routeData.points?.map((point, index) => `
-            <li style="font-size: 13px;">${point.nodeName || `Punto ${index + 1}`} (${point.lat.toFixed(4)}, ${point.lng.toFixed(4)})</li>
-          `).join('')}
-        </ul>
-        <div style="display: flex; justify-content: space-between; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+        <div style="margin-top: 10px; text-align: center;">
           <button 
-            onclick="window.dispatchEvent(new CustomEvent('deleteRoute', { detail: '${routeData.name}' }))"
-            style="padding: 6px 12px; background-color: #ef4444; color: white; border-radius: 4px; border: none; cursor: pointer;"
-          >
-            Eliminar Ruta
-          </button>
-          <button 
-            onclick="window.dispatchEvent(new CustomEvent('simulateRoute', { detail: '${routeData.name}' }))"
-            style="padding: 6px 12px; background-color: #3b82f6; color: white; border-radius: 4px; border: none; cursor: pointer;"
+            onclick="window.dispatchEvent(new CustomEvent('simulateRoute', { detail: { routeName: '${routeData.name}', speed: document.getElementById('simulationSpeed').value } }))"
+            style="padding: 5px 10px; background-color: #4CAF50; color: white; border-radius: 4px; border: none; cursor: pointer;"
           >
             Iniciar Simulación
+          </button>
+        </div>
+        <div style="margin-top: 10px; text-align: center;">
+          <button 
+            onclick="window.dispatchEvent(new CustomEvent('deleteRoute', { detail: '${routeData.name}' }))"
+            style="padding: 5px 10px; background-color: #ef4444; color: white; border-radius: 4px; border: none; cursor: pointer;"
+          >
+            Eliminar Ruta
           </button>
         </div>
       </div>
@@ -445,11 +463,41 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
     `;
   };
 
+  // Handle route simulation
+  const handleSimulateRoute = (eventData) => {
+    const { routeName, speed } = eventData;
+    console.log('Starting simulation with:', { routeName, speed });
+    
+    if (!simulationManagerRef.current) {
+      console.error('Simulation manager not initialized');
+      return;
+    }
+
+    try {
+      // Cerrar todos los popups abiertos
+      routeLayersRef.current.forEach(layer => {
+        if (layer && layer.isPopupOpen()) {
+          layer.closePopup();
+        }
+      });
+      
+      // Iniciar la simulación con la velocidad seleccionada
+      const result = simulationManagerRef.current.startSimulation(routeName, parseInt(speed));
+      console.log('Simulation start result:', result);
+      
+      if (!result.success) {
+        console.error('Failed to start simulation:', result.message);
+      }
+    } catch (error) {
+      console.error('Error starting simulation:', error);
+    }
+  };
+
   // Event listeners
   useEffect(() => {
     const handleDeleteNodeEvent = (e) => handleDeleteNode(e.detail);
     const handleDeleteRouteEvent = (e) => handleDeleteRoute(e.detail);
-    const handleSimulateRouteEvent = (e) => startSimulation(e.detail);
+    const handleSimulateRouteEvent = (e) => handleSimulateRoute(e.detail);
 
     window.addEventListener('deleteNode', handleDeleteNodeEvent);
     window.addEventListener('deleteRoute', handleDeleteRouteEvent);
@@ -586,6 +634,8 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
           </div>
         </div>
       </Modal>
+
+      <SimulationController simulationManager={simulationManagerRef.current} />
     </>
   );
 });
