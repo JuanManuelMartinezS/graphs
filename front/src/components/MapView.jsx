@@ -6,7 +6,7 @@ import PointModal from './PointModal';
 import SimulationController from './SimulationController';
 import { addNode, deleteNode, loadNodes } from '../services/nodeService';
 import { drawRoute as calculateRoute, loadRoutes, deleteRoute } from '../services/routeService';
-import { startSimulation } from '../services/simulationService';
+import { startSimulation } from '../services/SimulationService';
 import { showMinimumDistances, clearDistanceElements } from '../services/distanceService';
 import { initSimulationManager, cleanupSimulationManager } from '../services/simulationManager';
 
@@ -133,6 +133,7 @@ const MapView = forwardRef(({ onRoutesLoaded = () => { } }, ref) => {
         mapInstance.current, 
         distanceElementsRef.current
       );
+    },
     startRouteSimulation: (routeName) => {
       if (simulationManagerRef.current) {
         return simulationManagerRef.current.startSimulation(routeName);

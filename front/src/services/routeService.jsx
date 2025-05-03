@@ -129,10 +129,18 @@ export const saveRoutes = async (routes) => {
   try {
     console.log("Guardando rutas:", routes.length);
 
+    // Primero cargamos las rutas existentes
+    const existingRoutes = await loadRoutes();
+    const existingRouteNames = new Set(existingRoutes.map(r => r.name));
+
     // Guardamos cada ruta individualmente usando la API existente
     const results = [];
     for (const route of routes) {
       try {
+        if (existingRouteNames.has(route.name)) {
+          console.log(`Ruta ${route.name} ya existe, omitiendo...`);
+          continue;
+        }
         const result = await saveRoute(route);
         results.push(result);
       } catch (error) {
@@ -177,10 +185,18 @@ export const saveNodes = async (nodes) => {
   try {
     console.log("Guardando nodos:", nodes.length);
 
+    // Primero cargamos los nodos existentes
+    const existingNodes = await loadNodes();
+    const existingNodeNames = new Set(existingNodes.map(n => n.name));
+
     // Guardamos cada nodo individualmente usando la API existente
     const results = [];
     for (const node of nodes) {
       try {
+        if (existingNodeNames.has(node.name)) {
+          console.log(`Nodo ${node.name} ya existe, omitiendo...`);
+          continue;
+        }
         const result = await saveNode(node);
         results.push(result);
       } catch (error) {
