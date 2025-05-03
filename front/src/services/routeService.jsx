@@ -157,61 +157,6 @@ export const saveRoutes = async (routes) => {
   }
 };
 
-// Guardar un nodo en el servidor
-export const saveNode = async (nodeData) => {
-  try {
-    const response = await fetch(`${API_BASE}/nodes`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(nodeData)
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Error al guardar el nodo");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error al guardar nodo:", error);
-    throw error;
-  }
-};
-
-// Guardar múltiples nodos a la vez
-export const saveNodes = async (nodes) => {
-  try {
-    console.log("Guardando nodos:", nodes.length);
-
-    // Primero cargamos los nodos existentes
-    const existingNodes = await loadNodes();
-    const existingNodeNames = new Set(existingNodes.map(n => n.name));
-
-    // Guardamos cada nodo individualmente usando la API existente
-    const results = [];
-    for (const node of nodes) {
-      try {
-        if (existingNodeNames.has(node.name)) {
-          console.log(`Nodo ${node.name} ya existe, omitiendo...`);
-          continue;
-        }
-        const result = await saveNode(node);
-        results.push(result);
-      } catch (error) {
-        console.error(`Error al guardar nodo ${node.name}:`, error);
-        // Continuamos con el siguiente nodo
-      }
-    }
-
-    console.log(`Nodos guardados correctamente: ${results.length} de ${nodes.length}`);
-    return { success: true, saved: results.length, total: nodes.length };
-  } catch (error) {
-    console.error("Error global al guardar nodos:", error);
-    throw error;
-  }
-};
 
 // Eliminar una ruta
 export const deleteRoute = async (routeName) => {
@@ -232,24 +177,6 @@ export const deleteRoute = async (routeName) => {
   }
 };
 
-// Eliminar un nodo
-export const deleteNode = async (nodeName) => {
-  try {
-    const response = await fetch(`${API_BASE}/nodes/${nodeName}`, {
-      method: 'DELETE'
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Error al eliminar el nodo");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error al eliminar nodo:", error);
-    throw error;
-  }
-};
 
 // Exportar rutas y nodos a un único archivo JSON
 export const exportDataToFile = async () => {

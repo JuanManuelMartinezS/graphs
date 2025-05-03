@@ -5,8 +5,8 @@ import 'leaflet/dist/leaflet.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
-import AddRoutePage from '../src/components/AddRoute';
 import App from './App';
+import AddRoutePage from './pages/AddRoute/AddRoute';
 import './style.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(

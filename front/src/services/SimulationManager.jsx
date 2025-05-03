@@ -1,9 +1,11 @@
-import { startSimulation as initializeSimulation, 
-    pauseSimulation, 
-    resumeSimulation, 
-    stopSimulation,
-    SIMULATION_EVENTS } from './SimulationService';
-import { createBicycleMarker } from '../components/BicycleMarker';
+import { createBicycleMarker } from '../components/ui/BicycleMarker';
+import {
+  startSimulation as initializeSimulation,
+  pauseSimulation,
+  resumeSimulation,
+  SIMULATION_EVENTS,
+  stopSimulation
+} from './SimulationService';
 
 let bicycleMarker = null;
 let simulationActive = false;

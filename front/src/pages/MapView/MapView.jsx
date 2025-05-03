@@ -1,14 +1,16 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { clearDistanceElements, showMinimumDistances } from '../services/distanceService';
-import { addNode, deleteNode, loadNodes } from '../services/nodeService';
-import { drawRoute as calculateRoute, deleteRoute, loadRoutes } from '../services/routeService';
-import { cleanupSimulationManager, initSimulationManager } from '../services/simulationManager';
-import { startSimulation } from '../services/SimulationService';
-import SimulationController from './SimulationController';
-import Modal from './ui/Modal';
-import PointModal from './ui/PointModal';
+import SimulationController from '../../components/SimulationController';
+import Modal from '../../components/ui/Modal';
+import { createNodeIcon, createNodePopupContent } from '../../components/ui/Nodes/NodeInfo';
+import PointModal from '../../components/ui/Nodes/NodeModal';
+import { createRoutePopupContent } from '../../components/ui/Routes/RouteInfo';
+import { clearDistanceElements, showMinimumDistances } from '../../services/distanceService';
+import { addNode, deleteNode, loadNodes } from '../../services/nodeService';
+import { drawRoute as calculateRoute, deleteRoute, loadRoutes } from '../../services/routeService';
+import { cleanupSimulationManager, initSimulationManager } from '../../services/simulationManager';
+import { startSimulation } from '../../services/SimulationService';
 
 const API_BASE = 'http://localhost:5000';
 const OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e36589d';
@@ -303,97 +305,6 @@ const MapView = forwardRef(({ onRoutesLoaded = () => { } }, ref) => {
     }
   };
 
-  const createRoutePopupContent = (routeData) => {
-    return `
-<div style="min-width: 250px; font-family: Arial, sans-serif; background-color: #f8f9fa; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-    <div style="border-bottom: 1px solid #dee2e6; padding-bottom: 10px; margin-bottom: 10px;">
-        <h2 style="margin: 0; color: #2c3e50;">${routeData.name}</h2>
-        <p style="margin: 5px 0 0; color: #7f8c8d; font-size: 0.9em;">${routeData.description || 'Sin descripción'}</p>
-    </div>
-    
-    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-        <span style="font-weight: bold;">Distancia:</span>
-        <span>${(routeData.distance / 1000).toFixed(2)} km</span>
-    </div>
-    
-    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-        <span style="font-weight: bold;">Duración estimada:</span>
-        <span>${routeData.estimatedTime} minutos</span>
-    </div>
-    
-    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-        <span style="font-weight: bold;">Puntos de interés:</span>
-        <span>${routeData.points.filter(p => p.type === 'interest').length}</span>
-    </div>
-    
-    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-        <span style="font-weight: bold;">Puntos de control:</span>
-        <span>${routeData.points.filter(p => p.type === 'control').length}</span>
-    </div>
-    
-    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-        <span style="font-weight: bold;">Nivel de riesgo:</span>
-        <span>
-            ${routeData.risk.toFixed(1)} 
-            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: ${ 
-                routeData.risk < 2 ? '#4CAF50' : 
-                routeData.risk < 3 ? '#FFC107' : 
-                routeData.risk < 4 ? '#FF9800' : '#F44336'
-            }; margin-left: 5px;"></span>
-        </span>
-    </div>
-    
-     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-        <span style="font-weight: bold;">Dificultad:</span>
-        <span>
-            ${'<span style="color: #FFD700;">★</span>'.repeat(routeData.difficulty) + 
-              '<span style="color: #cccccc;">☆</span>'.repeat(5 - routeData.difficulty)}
-        </span>
-    </div>
-    
-    <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-        <span style="font-weight: bold;">Popularidad:</span>
-        <span>
-            ${'<span style="color: #FFD700;">★</span>'.repeat(routeData.popularity) + 
-              '<span style="color: #cccccc;">☆</span>'.repeat(5 - routeData.popularity)}
-        </span>
-    </div>
-    
-    <div style="margin-top: 15px; background-color: #e9ecef; padding: 10px; border-radius: 5px;">
-        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Velocidad de simulación (km/h):</label>
-        <input 
-            type="number" 
-            id="simulationSpeed" 
-            min="5" 
-            max="100" 
-            value="15" 
-            style="width: 100%; padding: 5px; border: 1px solid #ced4da; border-radius: 4px;"
-        >
-    </div>
-    
-    <div style="display: flex; justify-content: space-between; margin-top: 15px; gap: 10px;">
-        <button 
-            onclick="window.dispatchEvent(new CustomEvent('simulateRoute', { detail: { routeName: '${routeData.name}', speed: document.getElementById('simulationSpeed').value } }))"
-            style="flex: 1; padding: 8px; background-color: #4CAF50; color: white; border-radius: 4px; border: none; cursor: pointer; font-weight: bold;"
-        >
-            Iniciar Simulación
-        </button>
-        <button 
-            onclick="window.dispatchEvent(new CustomEvent('deleteRoute', { detail: '${routeData.name}' }))"
-            style="flex: 1; padding: 8px; background-color: #ef4444; color: white; border-radius: 4px; border: none; cursor: pointer; font-weight: bold;"
-        >
-            Eliminar
-        </button>
-    </div>
-    
-    <div style="margin-top: 10px; text-align: right;">
-        <small style="color: #95a5a6; font-size: 0.8em;">
-            Creada: ${new Date(routeData.created_at).toLocaleDateString()}
-        </small>
-    </div>
-</div>
-    `;
-  };
 
   const handleCreateRouteClick = (e, map) => {
     const newPoint = {
@@ -560,102 +471,7 @@ const MapView = forwardRef(({ onRoutesLoaded = () => { } }, ref) => {
     });
   };
 
-  const createNodeIcon = (node) => {
-    if (node.type === 'interest') {
-      return L.divIcon({
-        className: 'custom-marker',
-        html: `<div style="background-color: purple; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; display: flex; justify-content: center; align-items: center;">
-                 <span style="color: white; font-size: 12px;">★</span>
-               </div>`,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12]
-      });
-    }
-
-    const markerColor = {
-      1: 'green',
-      2: 'blue',
-      3: 'yellow',
-      4: 'orange',
-      5: 'red'
-    }[node.risk] || 'blue';
-
-    return L.divIcon({
-      className: 'custom-marker',
-      html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; display: flex; justify-content: center; align-items: center;">
-               <span style="color: white; font-size: 10px; font-weight: bold;">${node.risk}</span>
-             </div>`,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12]
-    });
-  };
-
-  const createNodePopupContent = (node) => {
-    return `
-<div style="min-width: 240px; font-family: 'Segoe UI', Arial, sans-serif; 
-            border-radius: 8px; padding: 15px; box-shadow: 0 3px 10px rgba(0,0,0,0.15);
-            background: ${node.type === 'control' ? '#fff8f8' : '#f8faff'}; 
-            border-left: 4px solid ${node.type === 'control' ? '#ef4444' : '#6366f1'};">
-
-    <!-- Encabezado con icono según tipo -->
-    <div style="display: flex; align-items: center; margin-bottom: 10px;">
-        <div style="width: 32px; height: 32px; border-radius: 50%; 
-                    background: ${node.type === 'control' ? '#ef4444' : '#6366f1'}; 
-                    color: white; display: flex; align-items: center; justify-content: center;
-                    margin-right: 10px; font-size: 14px;">
-            ${node.type === 'control' ? '🛡️' : '⭐'}
-        </div>
-        <div>
-            <h3 style="margin: 0; color: #1f2937; font-size: 18px;">${node.name}</h3>
-            <small style="color: #6b7280;">${node.type === 'control' ? 'Punto de control' : 'Punto de interés'}</small>
-        </div>
-    </div>
-
-    <!-- Descripción -->
-    <div style="background: white; padding: 10px; border-radius: 6px; margin-bottom: 12px;
-                border: 1px solid #e5e7eb;">
-        <p style="margin: 0; color: #4b5563; font-size: 14px;">${node.description || 'Sin descripción'}</p>
-    </div>
-
-    <!-- Detalles específicos -->
-    <div style="margin-bottom: 12px;">
-        ${node.type === 'control' ? `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-            <span style="color: #6b7280; font-weight: 500;">Nivel de riesgo:</span>
-            <span style="font-weight: bold; color: ${
-                node.risk < 2 ? '#10b981' : 
-                node.risk < 3 ? '#f59e0b' : 
-                node.risk >= 4 ? '#ef4444' : '#f97316'
-            };">
-                ${node.risk} ${'⚠️'.repeat(Math.min(Math.floor(node.risk), 3))}
-            </span>
-        </div>
-        ` : ''}
-
-        <div style="display: flex; justify-content: space-between;">
-            <span style="color: #6b7280; font-weight: 500;">Coordenadas:</span>
-            <span style="font-family: monospace; color: #4b5563;">${node.lat.toFixed(4)}, ${node.lng.toFixed(4)}</span>
-        </div>
-    </div>
-
-    <!-- Pie con fecha y botón -->
-    <div style="border-top: 1px solid #e5e7eb; padding-top: 12px; display: flex; 
-                justify-content: space-between; align-items: center;">
-        <small style="color: #9ca3af;">Creado: ${new Date(node.created_at).toLocaleDateString()}</small>
-        <button 
-            onclick="window.dispatchEvent(new CustomEvent('deleteNode', { detail: '${node.name}' }))"
-            style="padding: 6px 12px; background-color: #ef4444; color: white; 
-                   border-radius: 6px; border: none; cursor: pointer; font-size: 13px;
-                   display: flex; align-items: center; gap: 5px; transition: all 0.2s;"
-            onmouseover="this.style.backgroundColor='#dc2626'" 
-            onmouseout="this.style.backgroundColor='#ef4444'"
-        >
-            🗑️ Eliminar
-        </button>
-    </div>
-</div>
-    `;
-  };
+ 
 
   // Handle route simulation
   const handleSimulateRoute = (eventData) => {

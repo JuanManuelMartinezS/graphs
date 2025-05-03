@@ -2,9 +2,9 @@ import 'leaflet-routing-machine';
 import 'leaflet/dist/leaflet.css';
 import { default as React, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import MapView from './components/MapView';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
+import MapView from './pages/MapView/MapView';
 
 function App() {
   const mapViewRef = useRef();
