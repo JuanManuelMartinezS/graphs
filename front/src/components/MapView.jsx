@@ -48,6 +48,39 @@ const MapView = forwardRef(({ onRoutesLoaded = () => { } }, ref) => {
       markersRef.current.forEach(marker => marker.remove());
       markersRef.current = [];
     },
+    clearHighlightedRoutes: () => {
+      routeLayersRef.current.forEach(layer => {
+        if (layer && layer.highlighted) {
+          layer.setStyle({ 
+            color: '#0066ff', // Color normal
+            weight: 5,        // Grosor normal
+            opacity: 0.8
+          });
+          layer.highlighted = false;
+          if (layer.isPopupOpen()) {
+            layer.closePopup();
+          }
+        }
+      });
+    },
+    
+    showRouteWithColor: (routeName, color) => {
+      if (!mapInstance.current) return;
+      
+      const routeLayer = routeLayersRef.current.find(
+        layer => layer && layer.routeData?.name === routeName
+      );
+  
+      if (routeLayer) {
+        routeLayer.setStyle({
+          color: color,
+          weight: 6,         // Un poco más grueso que el normal
+          opacity: 0.9
+        });
+        routeLayer.highlighted = true;
+        routeLayer.bringToFront();
+      }
+    },
     highlightRoute: (route) => {
       // Restablece todas las rutas resaltadas
       routeLayersRef.current.forEach(layer => {

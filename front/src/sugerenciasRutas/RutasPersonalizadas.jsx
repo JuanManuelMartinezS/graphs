@@ -1,6 +1,20 @@
 import React, { useState } from 'react';
 import Modal from '../components/Modal';
 
+// Array de colores para las rutas (puedes personalizarlos)
+const ROUTE_COLORS = [
+  '#FF5733', // Rojo anaranjado
+  '#33FF57', // Verde
+  '#3357FF', // Azul
+  '#F033FF', // Magenta
+  '#FF33F0', // Rosa
+  '#33FFF5', // Turquesa
+  '#F5FF33', // Amarillo
+  '#8A2BE2', // Azul violeta
+  '#FF6347', // Tomate
+  '#20B2AA'  // Verde mar
+];
+
 const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit }) => {
   const [filtros, setFiltros] = useState({
     duracion: '',
@@ -10,7 +24,6 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit }) => {
   const [rutasSugeridas, setRutasSugeridas] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [selectedRoute, setSelectedRoute] = useState(null);
   const [noResults, setNoResults] = useState(false);
 
   const handleChange = (e) => {
@@ -26,7 +39,6 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit }) => {
     setIsLoading(true);
     setError(null);
     setRutasSugeridas([]);
-    setSelectedRoute(null);
     setNoResults(false);
 
     try {
@@ -48,7 +60,14 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit }) => {
       if (rutas.length === 0) {
         setNoResults(true);
       } else {
-        setRutasSugeridas(rutas);
+        // Asignar un color a cada ruta
+        const rutasConColores = rutas.map((ruta, index) => ({
+          ...ruta,
+          color: ROUTE_COLORS[index % ROUTE_COLORS.length]
+        }));
+        setRutasSugeridas(rutasConColores);
+        // Enviar todas las rutas con sus colores al componente padre
+        onSubmit(rutasConColores);
       }
     } catch (err) {
       setError(err.message);
@@ -57,16 +76,12 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit }) => {
     }
   };
 
-  const handleSelectRoute = (ruta) => {
-    setSelectedRoute(ruta);
-    onSubmit(ruta);
-    onClose();
-  };
-
   const handleBackToForm = () => {
     setRutasSugeridas([]);
     setError(null);
     setNoResults(false);
+    // Notificar al componente padre para limpiar las rutas mostradas
+    onSubmit([]);
   };
 
   const renderRouteDetails = (ruta) => {
@@ -98,13 +113,24 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit }) => {
             <span className="font-medium">Puntos: </span>
             <span>{ruta.points?.length || 0}</span>
           </div>
+          <div>
+            <span className="font-medium">Color: </span>
+            <span 
+              className="inline-block w-4 h-4 rounded-full ml-1 border border-gray-300"
+              style={{ backgroundColor: ruta.color }}
+            ></span>
+          </div>
         </div>
       </div>
     );
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal isOpen={isOpen} onClose={() => {
+      onClose();
+      // Limpiar las rutas al cerrar el modal
+      onSubmit([]);
+    }}>
       <h2 className="text-xl font-bold mb-4 text-gray-800">Ruta Personalizada</h2>
       
       {rutasSugeridas.length === 0 && !noResults ? (
@@ -167,7 +193,10 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit }) => {
           <div className="flex justify-end space-x-3">
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                onClose();
+                onSubmit([]);
+              }}
               className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
             >
               Cancelar
@@ -205,6 +234,7 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit }) => {
       ) : (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-700">Rutas sugeridas:</h3>
+          <p className="text-sm text-gray-500">Todas las rutas se están mostrando en el mapa con colores diferentes</p>
           
           {error && (
             <div className="p-3 bg-red-100 text-red-700 rounded">
@@ -216,40 +246,30 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit }) => {
             {rutasSugeridas.map((ruta, index) => (
               <div 
                 key={`${ruta.name}-${index}`}
-                className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                  selectedRoute?.name === ruta.name 
-                    ? 'border-blue-500 bg-blue-50 shadow-md' 
-                    : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                }`}
-                onClick={() => handleSelectRoute(ruta)}
+                className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
               >
                 <div className="flex justify-between items-start">
                   <h4 className="font-bold text-gray-800 text-lg">{ruta.name}</h4>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    ruta.difficulty <= 2 ? 'bg-green-100 text-green-800' :
-                    ruta.difficulty <= 3 ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {ruta.difficulty <= 2 ? 'Fácil' : 
-                     ruta.difficulty <= 3 ? 'Moderado' : 'Difícil'}
-                  </span>
+                  <div className="flex items-center">
+                    <span 
+                      className="inline-block w-4 h-4 rounded-full mr-2 border border-gray-300"
+                      style={{ backgroundColor: ruta.color }}
+                    ></span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      ruta.difficulty <= 2 ? 'bg-green-100 text-green-800' :
+                      ruta.difficulty <= 3 ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {ruta.difficulty <= 2 ? 'Fácil' : 
+                       ruta.difficulty <= 3 ? 'Moderado' : 'Difícil'}
+                    </span>
+                  </div>
                 </div>
                 
                 {renderRouteDetails(ruta)}
                 
-                <div className="mt-3 flex justify-between items-center text-xs">
-                  <span className="text-gray-500">
-                    Creada: {new Date(ruta.created_at).toLocaleDateString()}
-                  </span>
-                  <button 
-                    className="text-blue-600 hover:text-blue-800 font-medium"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSelectRoute(ruta);
-                    }}
-                  >
-                    Seleccionar ruta
-                  </button>
+                <div className="mt-3 text-xs text-gray-500">
+                  Creada: {new Date(ruta.created_at).toLocaleDateString()}
                 </div>
               </div>
             ))}
@@ -263,7 +283,10 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit }) => {
               Volver
             </button>
             <button
-              onClick={onClose}
+              onClick={() => {
+                onClose();
+                // No limpiamos las rutas aquí, se mantienen visibles
+              }}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
               Cerrar
