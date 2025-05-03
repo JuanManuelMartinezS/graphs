@@ -216,14 +216,6 @@ class Graph:
 
         return distances, next_node
 
-    def reconstruct_path(start, end, next_node):
-        if next_node[start][end] is None:
-            return None  # No hay ruta
-        path = [start]
-        while start != end:
-            start = next_node[start][end]
-            path.append(start)
-        return path
 
 
 
@@ -301,7 +293,15 @@ class Graph:
             max_flow += path_flow
 
         return max_flow
-
+    
+def reconstruct_path(start, end, next_node):
+        if next_node[start][end] is None:
+            return None  # No hay ruta
+        path = [start]
+        while start != end:
+            start = next_node[start][end]
+            path.append(start)
+        return path
     
 def test_graph():
     g = Graph()
@@ -339,8 +339,8 @@ def test_graph():
     dist, next_node = g.floyd_warshall_with_paths()
     print("Minimum distances with paths from node 'A':", dist['A'])
     print("Next node for path reconstruction:", next_node['A'])
-    #path = g.reconstruct_path('A', 'E', next_node)
-    #print("Ruta óptima de A a E:", path)
+    path = reconstruct_path('A', 'E', next_node)
+    print("Ruta óptima de A a E:", path)
 
 
 

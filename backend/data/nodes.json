@@ -31,5 +31,14 @@
         "description": "as",
         "type": "interest",
         "created_at": "2025-05-03T16:42:37.738562"
+    },
+    {
+        "lat": 5.075042448935195,
+        "lng": -75.48963546752931,
+        "name": "P10",
+        "description": "asasasa",
+        "type": "control",
+        "risk": 3,
+        "created_at": "2025-05-03T17:24:23.363482"
     }
 ]

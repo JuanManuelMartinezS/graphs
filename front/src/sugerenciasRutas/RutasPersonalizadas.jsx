@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import Modal from '../components/ui/Modal';
+import { loadNodes } from '../services/nodeService';
+const API_BASE = 'http://localhost:5000';
 
 // Array de colores para las rutas (puedes personalizarlos)
 const ROUTE_COLORS = [
@@ -14,12 +16,12 @@ const ROUTE_COLORS = [
   '#FF6347', // Tomate
   '#20B2AA'  // Verde mar
 ];
-
 const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit }) => {
   const [filtros, setFiltros] = useState({
     duracion: '',
     dificultad: '',
-    experiencia: ''
+    experiencia: '',
+    nodos: []
   });
   const [rutasSugeridas, setRutasSugeridas] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,13 +44,20 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit }) => {
     setNoResults(false);
 
     try {
-      const response = await fetch('http://localhost:5000/routes/suggest', {
+      const nodes = await loadNodes();
+      setFiltros(prev => ({ ...prev, nodos: nodes }));
+      console.log(filtros);
+      
+      const response = await fetch('http://localhost:5000/generar_rutas', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(filtros)
       });
+
+      console.log(response);
+      
 
       if (!response.ok) {
         const errorData = await response.json();
