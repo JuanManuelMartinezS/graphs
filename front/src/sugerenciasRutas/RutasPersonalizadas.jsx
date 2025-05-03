@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Modal from '../components/Modal';
+import Modal from '../components/ui/Modal';
 
 // Array de colores para las rutas (puedes personalizarlos)
 const ROUTE_COLORS = [

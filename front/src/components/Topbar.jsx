@@ -51,20 +51,21 @@ function Topbar() {
   };
 
   return (
-    <div className="bg-gray-800 text-white p-4 flex space-x-4 shadow-md z-10">
+    <div className="bg-gray-800 text-white p-4 flex justify-end shadow-md z-10">
+    <div className="flex space-x-6">
       <button
         className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded transition"
         onClick={handleExport}
       >
         Exportar datos
       </button>
-
+  
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleLoadData}
         accept=".json"
-        style={{ display: 'none' }}
+        className="hidden"
       />
       <button
         className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded transition"
@@ -72,18 +73,15 @@ function Topbar() {
       >
         Cargar Rutas predefinidas
       </button>
-
+  
       <button
-        className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded transition"
+        className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded transition"
         onClick={() => navigate('/add-route')}
       >
         Crear ruta
       </button>
-
-      <button className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded transition">
-        Cambiar experiencia
-      </button>
     </div>
+  </div>
   );
 }
 

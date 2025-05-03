@@ -164,82 +164,88 @@ function Sidebar({
   };
 
   return (
-    <div className="w-64 bg-gray-700 text-white p-4 space-y-2 overflow-y-auto h-full">
-      <div className="relative">
-        <button
-          className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
-          onClick={() => setShowExperienciaSelect(!showExperienciaSelect)}
-        >
-          Ruta según experiencia
-        </button>
-
-        {showExperienciaSelect && (
-          <div className="absolute z-10 mt-1 w-full bg-white rounded shadow-lg">
-            <select
-              className="w-full p-2 text-gray-800 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              onChange={(e) => handleExperienciaSelect(parseInt(e.target.value))}
-              value={selectedExperiencia || ''}
-            >
-              <option value="" disabled>Selecciona tu nivel</option>
-              <option value="1">1 - Principiante</option>
-              <option value="2">2 - Básico</option>
-              <option value="3">3 - Intermedio</option>
-              <option value="4">4 - Avanzado</option>
-              <option value="5">5 - Experto</option>
-            </select>
-          </div>
-        )}
-      </div>
-
+<div className="w-64 bg-gray-700 text-white p-4 flex flex-col h-full">
+  {/* Contenedor principal para los botones superiores con espacio aumentado */}
+  <div className="space-y-4 mb-4 overflow-y-auto">
+    <div className="relative">
       <button
         className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
-        onClick={handleRutaMenosPeligrosa}
+        onClick={() => setShowExperienciaSelect(!showExperienciaSelect)}
       >
-        Ruta menos peligrosa
+        Ruta según experiencia
       </button>
 
-      <button
-        className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
-        onClick={() => setShowRutaPersonalizada(true)}
-      >
-        Ruta personalizada
-      </button>
-
-      <button 
-        className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
-        onClick={() => setShowModalPersonalizada2(true)}
-      >
-        Rutas personalizadas
-      </button>
-
-      <button 
-        className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
-        onClick={handleMinimumDistances}
-      >
-        Recomendar distancias mínimas
-      </button>
-
-      <button
-        className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
-        onClick={onAddPoint}
-      >
-        Añadir punto
-      </button>
-
-      <RutaPersonalizada
-        isOpen={showRutaPersonalizada}
-        onClose={() => setShowRutaPersonalizada(false)}
-        routes={routes}
-        onRouteSelected={handleRouteSelected}
-      />
-      
-      <ModalRutasPersonalizadas
-        isOpen={showModalPersonalizada2}
-        onClose={() => setShowModalPersonalizada2(false)}
-        onSubmit={handleSubmitRutaPersonalizada2}
-        routes={routes}
-      />
+      {showExperienciaSelect && (
+        <div className="absolute z-10 mt-1 w-full bg-white rounded shadow-lg">
+          <select
+            className="w-full p-2 text-gray-800 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => handleExperienciaSelect(parseInt(e.target.value))}
+            value={selectedExperiencia || ''}
+          >
+            <option value="" disabled>Selecciona tu nivel</option>
+            <option value="1">1 - Principiante</option>
+            <option value="2">2 - Básico</option>
+            <option value="3">3 - Intermedio</option>
+            <option value="4">4 - Avanzado</option>
+            <option value="5">5 - Experto</option>
+          </select>
+        </div>
+      )}
     </div>
+
+    <button
+      className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
+      onClick={handleRutaMenosPeligrosa}
+    >
+      Ruta menos peligrosa
+    </button>
+
+    <button
+      className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
+      onClick={() => setShowRutaPersonalizada(true)}
+    >
+      Ruta personalizada
+    </button>
+
+    <button 
+      className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
+      onClick={() => setShowModalPersonalizada2(true)}
+    >
+      Rutas personalizadas
+    </button>
+
+    <button 
+      className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
+      onClick={handleMinimumDistances}
+    >
+      Recomendar distancias mínimas
+    </button>
+  </div>
+
+  {/* Botón "Añadir punto" fijo en la parte inferior con color morado */}
+  <div className="mt-auto pt-4 border-t border-gray-600">
+    <button
+      className="w-full bg-purple-600 hover:bg-purple-700 p-2 rounded transition"
+      onClick={onAddPoint}
+    >
+      Añadir punto
+    </button>
+  </div>
+
+  <RutaPersonalizada
+    isOpen={showRutaPersonalizada}
+    onClose={() => setShowRutaPersonalizada(false)}
+    routes={routes}
+    onRouteSelected={handleRouteSelected}
+  />
+  
+  <ModalRutasPersonalizadas
+    isOpen={showModalPersonalizada2}
+    onClose={() => setShowModalPersonalizada2(false)}
+    onSubmit={handleSubmitRutaPersonalizada2}
+    routes={routes}
+  />
+</div>
   );
 }
 
