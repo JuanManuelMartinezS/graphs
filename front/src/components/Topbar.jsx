@@ -57,7 +57,7 @@ function Topbar() {
         className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded transition"
         onClick={handleExport}
       >
-        Exportar datos
+        Exportar rutas y nodos
       </button>
   
       <input

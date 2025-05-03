@@ -184,17 +184,48 @@ class Graph:
         """
         nodes = list(self.graph.keys())
         distances = {u: {v: float('inf') for v in nodes} for u in nodes}
+        
         for u in nodes:
             distances[u][u] = 0
             for v, weight in self.graph[u].items():
                 distances[u][v] = weight
-
         for k in nodes:
             for i in nodes:
                 for j in nodes:
                     distances[i][j] = min(distances[i][j], distances[i][k] + distances[k][j])
-
         return distances
+    
+
+    def floyd_warshall_with_paths(self):
+        nodes = list(self.graph.keys())
+        distances = {u: {v: float('inf') for v in nodes} for u in nodes}
+        next_node = {u: {v: None for v in nodes} for u in nodes}
+
+        for u in nodes:
+            distances[u][u] = 0
+            for v, weight in self.graph[u].items():
+                distances[u][v] = weight
+                next_node[u][v] = v
+
+        for k in nodes:
+            for i in nodes:
+                for j in nodes:
+                    if distances[i][k] + distances[k][j] < distances[i][j]:
+                        distances[i][j] = distances[i][k] + distances[k][j]
+                        next_node[i][j] = next_node[i][k]
+
+        return distances, next_node
+
+    def reconstruct_path(start, end, next_node):
+        if next_node[start][end] is None:
+            return None  # No hay ruta
+        path = [start]
+        while start != end:
+            start = next_node[start][end]
+            path.append(start)
+        return path
+
+
 
     def bellman_ford(self, start):
         """
@@ -303,6 +334,15 @@ def test_graph():
             print(f"Distance from {u} to {v}: {floyd_distances[u][v]}")
 
     print("Minimum distances from node 'A' (Bellman-Ford):", g.bellman_ford('A'))
+
+
+    dist, next_node = g.floyd_warshall_with_paths()
+    print("Minimum distances with paths from node 'A':", dist['A'])
+    print("Next node for path reconstruction:", next_node['A'])
+    #path = g.reconstruct_path('A', 'E', next_node)
+    #print("Ruta óptima de A a E:", path)
+
+
 
     try:
         max_flow = g.ford_fulkerson('A', 'E')

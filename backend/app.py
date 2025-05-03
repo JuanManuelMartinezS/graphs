@@ -321,8 +321,6 @@ def handle_routes():
                 "points": points,
                 "graph": {node: dict(edges) for node, edges in route_graph.graph.items()},
                 "distance": total_distance,
-                "estimatedTime": data.get('estimatedTime'),
-                "duration": data.get('estimatedTime'),
                 "risk": risk_sum,
                 "created_at": datetime.now().isoformat()
             }

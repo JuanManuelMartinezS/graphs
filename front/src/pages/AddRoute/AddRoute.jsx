@@ -230,12 +230,10 @@ function AddRoutePage() {
       const distance = data.features[0].properties.summary.distance; // en metros
       console.log(distance);
 
-      const duration = data.features[0].properties.summary.duration; // en segundos
 
       // Guardar distancia y tiempo
       setRouteDistance({
         distance: Math.round(distance), // Redondear a entero
-        time: Math.round(duration / 60) // convertir a minutos
       });
 
       // Ajustar el mapa para mostrar toda la ruta
@@ -401,7 +399,7 @@ function AddRoutePage() {
         <label className="block text-sm font-medium text-gray-300">Dificultad</label>
         <div className="relative">
           <select
-            className="w-full p-3 rounded-lg text-gray-800 bg-gray-100 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none transition-all"
+            className="w-full p-3 rounded-lg text-gray-800 bg-gray-100 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 appearance-none transition-all"
             value={routeData.difficulty}
             onChange={(e) => setRouteData({ ...routeData, difficulty: e.target.value })}
           >
@@ -472,10 +470,6 @@ function AddRoutePage() {
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Distancia:</span>
               <span className="font-medium">{routeDistance.distance} m</span>
-            </div>
-            <div className="flex justify-between text-sm mt-1">
-              <span className="text-gray-400">Tiempo estimado:</span>
-              <span className="font-medium">{routeDistance.time} min</span>
             </div>
           </div>
         )}

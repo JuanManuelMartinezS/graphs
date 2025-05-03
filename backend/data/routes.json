@@ -1,219 +1,75 @@
 [
     {
-        "name": "uuu",
-        "description": "u",
+        "name": "Prueba",
+        "description": "prueba",
         "difficulty": 1,
         "popularity": 1,
         "points": [
             {
-                "lat": 5.063201392856124,
-                "lng": -75.50933361053468,
-                "nodeName": "asas",
+                "lat": 5.068502109055541,
+                "lng": -75.51770210266115,
+                "nodeName": "P1",
+                "type": "interest"
+            },
+            {
+                "lat": 5.063928106519055,
+                "lng": -75.5064582824707,
+                "nodeName": "PC1",
                 "risk": 4,
                 "type": "control"
             },
             {
-                "lat": 5.0620044509252144,
-                "lng": -75.50366878509521,
-                "nodeName": "dfdf",
-                "risk": 3,
-                "type": "control"
-            },
-            {
-                "lat": 5.0685876041218085,
-                "lng": -75.49118041992189,
-                "nodeName": "P2",
-                "risk": 4,
-                "type": "control"
+                "lat": 5.069528049103967,
+                "lng": -75.50371170043945,
+                "nodeName": "A2",
+                "type": "interest"
             }
         ],
         "graph": {
-            "asas": {
-                "dfdf": 965
+            "P1": {
+                "PC1": 2189
             },
-            "dfdf": {
-                "asas": 965,
-                "P2": 2355
+            "PC1": {
+                "P1": 2189,
+                "A2": 1128
             },
-            "P2": {
-                "dfdf": 2355
+            "A2": {
+                "PC1": 1128
             }
         },
-        "distance": 3320,
-        "estimatedTime": 40,
-        "duration": 40,
-        "risk": 3.6666666666666665,
-        "created_at": "2025-05-03T12:54:41.408635"
+        "distance": 3317,
+        "risk": 4.0,
+        "created_at": "2025-05-03T16:44:48.992386"
     },
     {
-        "name": "kkk",
-        "description": "k",
-        "difficulty": 4,
+        "name": "Prueba2",
+        "description": "hahahaha",
+        "difficulty": 3,
         "popularity": 3,
         "points": [
             {
-                "lat": 5.069699038953598,
-                "lng": -75.51199436187746,
-                "nodeName": "P3",
-                "risk": 5,
-                "type": "control"
+                "lat": 5.069528049103967,
+                "lng": -75.50371170043945,
+                "nodeName": "A2",
+                "type": "interest"
             },
             {
-                "lat": 5.0742730006243075,
-                "lng": -75.49113750457764,
-                "nodeName": "P1",
-                "risk": 3,
-                "type": "control"
-            },
-            {
-                "lat": 5.073415931515608,
-                "lng": -75.50010681152345,
-                "nodeName": "Yo",
+                "lat": 5.069613544034437,
+                "lng": -75.49156665802003,
+                "nodeName": "P2",
                 "type": "interest"
             }
         ],
         "graph": {
-            "P3": {
-                "P1": 3269
+            "A2": {
+                "P2": 1946
             },
-            "P1": {
-                "P3": 3269,
-                "Yo": 1380
-            },
-            "Yo": {
-                "P1": 1380
+            "P2": {
+                "A2": 1946
             }
         },
-        "distance": 4649,
-        "estimatedTime": 56,
-        "duration": 56,
-        "risk": 4.0,
-        "created_at": "2025-05-03T12:54:43.217890"
-    },
-    {
-        "name": "new",
-        "description": "m",
-        "difficulty": 1,
-        "popularity": 1,
-        "points": [
-            {
-                "lat": 5.066144135596127,
-                "lng": -75.5162698030472,
-                "nodeName": "y",
-                "risk": 1,
-                "type": "control"
-            },
-            {
-                "lat": 5.066897436478597,
-                "lng": -75.51988542079927,
-                "nodeName": "r",
-                "risk": 1,
-                "type": "control"
-            }
-        ],
-        "graph": {
-            "y": {
-                "r": 499
-            },
-            "r": {
-                "y": 499
-            }
-        },
-        "distance": 499,
-        "estimatedTime": 6,
-        "duration": 6,
-        "risk": 1.0,
-        "created_at": "2025-05-03T12:54:44.535428"
-    },
-    {
-        "name": "Prueba",
-        "description": "prueba",
-        "difficulty": 4,
-        "popularity": 2,
-        "points": [
-            {
-                "lat": 5.066144135596127,
-                "lng": -75.5162698030472,
-                "nodeName": "y",
-                "risk": 1,
-                "type": "control"
-            },
-            {
-                "lat": 5.066308778636779,
-                "lng": -75.51750898361207,
-                "nodeName": "P1",
-                "type": "interest"
-            },
-            {
-                "lat": 5.066897436478597,
-                "lng": -75.51988542079927,
-                "nodeName": "r",
-                "risk": 1,
-                "type": "control"
-            }
-        ],
-        "graph": {
-            "y": {
-                "P1": 180
-            },
-            "P1": {
-                "y": 180,
-                "r": 353
-            },
-            "r": {
-                "P1": 353
-            }
-        },
-        "distance": 533,
-        "estimatedTime": 6,
-        "duration": 6,
-        "risk": 1.0,
-        "created_at": "2025-05-03T13:04:38.732538"
-    },
-    {
-        "name": "cxcxcx",
-        "description": "xcxcxcxc",
-        "difficulty": 1,
-        "popularity": 1,
-        "points": [
-            {
-                "lat": 5.066144135596127,
-                "lng": -75.5162698030472,
-                "nodeName": "y",
-                "risk": 1,
-                "type": "control"
-            },
-            {
-                "lat": 5.063201392856124,
-                "lng": -75.50933361053468,
-                "nodeName": "asas",
-                "risk": 4,
-                "type": "control"
-            },
-            {
-                "lat": 5.0620044509252144,
-                "lng": -75.50366878509521,
-                "nodeName": "dfdf",
-                "risk": 3,
-                "type": "control"
-            }
-        ],
-        "graph": {
-            "y": {
-                "asas": 1228
-            },
-            "asas": {
-                "y": 1228,
-                "dfdf": 943
-            },
-            "dfdf": {
-                "asas": 943
-            }
-        },
-        "distance": 2171,
-        "estimatedTime": 26,
-        "duration": 26,
-        "risk": 2.6666666666666665,
-        "created_at": "2025-05-03T13:05:12.962201"
+        "distance": 1946,
+        "risk": 0,
+        "created_at": "2025-05-03T16:46:14.539267"
     }
 ]

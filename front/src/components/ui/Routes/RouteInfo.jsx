@@ -11,11 +11,7 @@
         <span>${(routeData.distance / 1000).toFixed(2)} km</span>
     </div>
     
-    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-        <span style="font-weight: bold;">Duración estimada:</span>
-        <span>${routeData.estimatedTime} minutos</span>
-    </div>
-    
+ 
     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
         <span style="font-weight: bold;">Puntos de interés:</span>
         <span>${routeData.points.filter(p => p.type === 'interest').length}</span>

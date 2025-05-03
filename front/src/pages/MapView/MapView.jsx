@@ -1,29 +1,51 @@
-import L from 'leaflet';
+
+
 import 'leaflet/dist/leaflet.css';
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import SimulationController from '../../components/SimulationController';
 import Modal from '../../components/ui/Modal';
-import { createNodeIcon, createNodePopupContent } from '../../components/ui/Nodes/NodeInfo';
 import PointModal from '../../components/ui/Nodes/NodeModal';
-import { createRoutePopupContent } from '../../components/ui/Routes/RouteInfo';
-import { clearDistanceElements, showMinimumDistances } from '../../services/distanceService';
-import { addNode, deleteNode, loadNodes } from '../../services/nodeService';
-import { drawRoute as calculateRoute, deleteRoute, loadRoutes } from '../../services/routeService';
-import { cleanupSimulationManager, initSimulationManager } from '../../services/simulationManager';
-import { startSimulation } from '../../services/SimulationService';
+import {
+    cleanupMap,
+    clearMapDistanceRoutes,
+    getApiBaseUrl,
+    getOpenRouteApiKey,
+    handleSimulateRoute,
+    initializeMap,
+    setupMapEventHandlers,
+    setupTimeEstimationHandlers,
+    showMapMinimumDistances
+} from './MapLogic';
+import {
+    handleAddPoint,
+    handleDeleteNode,
+    loadMapNodes
+} from './NodeManager';
+import {
+    handleCreateRouteClick,
+    handleDeleteRoute,
+    highlightRoute,
+    loadMapRoutes,
+    showRoutePopup,
+    showRouteWithColor
+} from './RouteManager';
 
-const API_BASE = 'http://localhost:5000';
-const OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e36589d';
-
-const MapView = forwardRef(({ onRoutesLoaded = () => { } }, ref) => {
+const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
+  // Referencias
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
+  const simulationManagerRef = useRef(null);
+  const markersRef = useRef([]);
+  const routeLayersRef = useRef([]);
+  
+  // Estado de elementos de distancia
   const distanceElementsRef = useRef({
     routes: [],
     markers: [],
     legend: null
   });
-  const simulationManagerRef = useRef(null);
+  
+  // Estados para UI y datos
   const [routePoints, setRoutePoints] = useState([]);
   const [mode, setMode] = useState('view');
   const [clickedPosition, setClickedPosition] = useState(null);
@@ -35,21 +57,25 @@ const MapView = forwardRef(({ onRoutesLoaded = () => { } }, ref) => {
     risk: '1'
   });
   const [selectedRoute, setSelectedRoute] = useState(null);
-  const markersRef = useRef([]);
-  const routeLayersRef = useRef([]);
   const [selectedNode, setSelectedNode] = useState(null);
   const [routes, setRoutes] = useState([]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [routeToDelete, setRouteToDelete] = useState(null);
 
-  // Exposed methods
+  // Constantes
+  const API_BASE = getApiBaseUrl();
+  const OPENROUTE_API_KEY = getOpenRouteApiKey();
+
+  // Métodos expuestos
   useImperativeHandle(ref, () => ({
     setMode: (newMode) => setMode(newMode),
+    
     clearRoute: () => {
       setRoutePoints([]);
       markersRef.current.forEach(marker => marker.remove());
       markersRef.current = [];
     },
+    
     clearHighlightedRoutes: () => {
       routeLayersRef.current.forEach(layer => {
         if (layer && layer.highlighted) {
@@ -67,302 +93,110 @@ const MapView = forwardRef(({ onRoutesLoaded = () => { } }, ref) => {
     },
     
     showRouteWithColor: (routeName, color) => {
-      if (!mapInstance.current) return;
-      
-      const routeLayer = routeLayersRef.current.find(
-        layer => layer && layer.routeData?.name === routeName
-      );
-  
-      if (routeLayer) {
-        routeLayer.setStyle({
-          color: color,
-          weight: 6,         // Un poco más grueso que el normal
-          opacity: 0.9
-        });
-        routeLayer.highlighted = true;
-        routeLayer.bringToFront();
-      }
+      showRouteWithColor(routeLayersRef.current, routeName, color, mapInstance.current);
     },
+    
     highlightRoute: (route) => {
-      // Restablece todas las rutas resaltadas
-      routeLayersRef.current.forEach(layer => {
-        if (layer.highlighted) {
-          layer.setStyle({ color: '#0066ff' }); // Color normal
-          layer.highlighted = false;
-        }
-      });
-      // Encuentra y resalta la nueva ruta
-      const routeLayer = routeLayersRef.current.find(
-        layer => layer.routeData?.name === route.name
-      );
-
-      if (routeLayer) {
-        routeLayer.setStyle({ color: '#ff0000', weight: 7 }); // Color rojo para resaltar, y aumenta el grosor
-        routeLayer.highlighted = true;
-        routeLayer.openPopup();
-        mapInstance.current?.fitBounds(routeLayer.getBounds());
-      }
+      highlightRoute(routeLayersRef.current, route, mapInstance.current);
     },
+    
     showRoutePopup: (routeName) => {
-      if (!mapInstance.current) return;
-      // 1. Restaurar todas las rutas a estilo normal
-      routeLayersRef.current.forEach(layer => {
-        if (!layer || !mapInstance.current.hasLayer(layer)) return;
-
-        if (layer.highlighted) {
-          layer.setStyle({
-            color: '#0066ff', // Azul estándar
-            weight: 5,        // Grosor normal
-            opacity: 0.8
-          });
-          layer.highlighted = false;
-        }
-
-        if (layer.isPopupOpen()) {
-          layer.closePopup();
-        }
-      });
-
-      // 2. Encontrar y resaltar la nueva ruta
-      const routeLayer = routeLayersRef.current.find(
-        layer => layer && layer.routeData?.name === routeName
-      );
-
-      if (routeLayer) {
-        // Aplicar nuevo estilo resaltado
-        routeLayer.setStyle({
-          color: '#ff0000',  // Rojo
-          weight: 7,         // Más grueso
-          opacity: 1         // Más opaco
-        });
-
-        // Marcar como resaltada
-        routeLayer.highlighted = true;
-
-        // Mostrar popup y ajustar vista
-        routeLayer.openPopup();
-        mapInstance.current.fitBounds(routeLayer.getBounds(), {
-          padding: [50, 50], // Espaciado
-          animate: true      // Animación suave
-        });
-
-        // Traer al frente
-        routeLayer.bringToFront();
-      }
+      showRoutePopup(routeLayersRef.current, routeName, mapInstance.current);
     },
+    
     showMinimumDistances: async (startNodeName) => {
       try {
-        const elements = await showMinimumDistances(
+        const elements = await showMapMinimumDistances(
           mapInstance.current, 
           startNodeName, 
-          API_BASE, 
-          OPENROUTE_API_KEY
+          distanceElementsRef.current
         );
         distanceElementsRef.current = elements;
       } catch (error) {
         alert(`Error: ${error.message}`);
       }
     },
+    
     clearDistanceRoutes: () => {
-      // Limpiar elementos del mapa
-      distanceElementsRef.current = clearDistanceElements(
+      distanceElementsRef.current = clearMapDistanceRoutes(
         mapInstance.current, 
         distanceElementsRef.current
       );
-      
-      // Limpiar cualquier otro elemento relacionado
-      const distanceLabels = document.querySelectorAll('.distance-label');
-      distanceLabels.forEach(label => label.remove());
-      
-      const startMarkers = document.querySelectorAll('.start-node-marker');
-      startMarkers.forEach(marker => marker.remove());
-      
       return { routes: [], markers: [], legend: null };
     },
   }));
 
-
-  // Initialize map
+  // Inicialización del mapa
   useEffect(() => {
+
     if (mapRef.current && !mapInstance.current) {
-      const map = L.map(mapRef.current).setView([5.0703, -75.5138], 13);
+      const { map, simulationManager } = initializeMap(mapRef.current);
       mapInstance.current = map;
+      simulationManagerRef.current = simulationManager;
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map);
-
-      // Initialize simulation manager
-      simulationManagerRef.current = initSimulationManager(map);
-      console.log('Simulation manager initialized:', simulationManagerRef.current);
-
-      loadMapNodes();
-      loadMapRoutes();
-
-      setTimeout(() => map.invalidateSize(), 0);
+      
+      loadMapNodes(map, markersRef.current, API_BASE, setSelectedNode);
+      loadMapRoutes(map, routeLayersRef.current, API_BASE, OPENROUTE_API_KEY, setRoutes, onRoutesLoaded);
     }
 
     return () => {
-      // Clean up simulation manager
-      if (simulationManagerRef.current) {
-        cleanupSimulationManager();
-        simulationManagerRef.current = null;
-      }
-      
-      if (mapInstance.current) {
-        mapInstance.current.off();
-        mapInstance.current.remove();
-        mapInstance.current = null;
-      }
+      cleanupMap(mapInstance.current, simulationManagerRef.current);
+      mapInstance.current = null;
+      simulationManagerRef.current = null;
     };
   }, []);
 
-  // Map click handlers
+  // Manejador de clics en el mapa
+  const handleMapClick = (e) => {
+    if (mode === 'addPoint') {
+      setClickedPosition(e.latlng);
+      setModalOpen(true);
+    } else if (mode === 'createRoute') {
+      handleCreateRouteClick(
+        e, 
+        mapInstance.current, 
+        routePoints, 
+        setRoutePoints, 
+        markersRef.current, 
+        OPENROUTE_API_KEY
+      );
+    }
+  };
+
+  // Configuración de eventos del mapa
   useEffect(() => {
     if (!mapInstance.current) return;
-
-    const handleMapClick = (e) => {
-      if (mode === 'addPoint') {
-        setClickedPosition(e.latlng);
-        setModalOpen(true);
-      } else if (mode === 'createRoute') {
-        handleCreateRouteClick(e, mapInstance.current);
-      }
-    };
-
-    const handleSpeedInputChange = (e) => {
-      const speedInput = e.target;
-      const estimatedTimeSpan = document.getElementById('estimatedTime');
-      if (speedInput && estimatedTimeSpan) {
-        const speed = parseInt(speedInput.value) || 15;
-        const routeLayer = routeLayersRef.current.find(
-          layer => layer && layer.routeData && layer.isPopupOpen()
-        );
-        if (routeLayer) {
-          const distance = routeLayer.routeData.distance;
-          const timeHours = (distance / 1000) / speed;
-          const minutes = Math.round(timeHours * 60);
-          const hours = Math.floor(minutes / 60);
-          const remainingMinutes = minutes % 60;
-          estimatedTimeSpan.textContent = `${hours > 0 ? `${hours}h ` : ''}${remainingMinutes}m`;
-        }
-      }
-    };
-
-    mapInstance.current.on('click', handleMapClick);
-    document.addEventListener('input', handleSpeedInputChange);
-
+    
+    const cleanupMapEvents = setupMapEventHandlers(mapInstance.current, handleMapClick);
+    const cleanupTimeEstimation = setupTimeEstimationHandlers(routeLayersRef.current);
+    
     return () => {
-      if (mapInstance.current) mapInstance.current.off('click', handleMapClick);
-      document.removeEventListener('input', handleSpeedInputChange);
+      cleanupMapEvents();
+      cleanupTimeEstimation();
     };
   }, [mode]);
 
-  // UI effects
+  // Efectos UI
   useEffect(() => {
     if (mapInstance.current) {
       setTimeout(() => mapInstance.current.invalidateSize(), 300);
     }
   }, [modalOpen, deleteConfirmOpen]);
 
-  // Map rendering functions
-  const renderRoute = async (points, routeData) => {
-    if (!mapInstance.current || points.length < 2) return;
-
-    try {
-      const data = await calculateRoute(points, routeData, OPENROUTE_API_KEY);
-      const routeGeometry = data.features[0].geometry;
-
-      const routeLayer = L.geoJSON(routeGeometry, {
-        style: { color: '#0066ff', weight: 5, opacity: 0.8 }
-      }).addTo(mapInstance.current);
-
-      routeLayer.highlighted = false;
-      routeLayer.routeData = routeData;
-
-      if (routeData) {
-        const popupContent = createRoutePopupContent(routeData);
-        routeLayer.bindPopup(popupContent, {
-          maxWidth: 300,
-          className: 'route-popup'
-        });
+  // Manejo de puntos
+  const onAddPoint = async () => {
+    const success = await handleAddPoint(
+      pointData, 
+      clickedPosition, 
+      API_BASE, 
+      () => {
+        loadMapNodes(mapInstance.current, markersRef.current, API_BASE, setSelectedNode);
+        setMode('view');
       }
-
-      routeLayer.on('click', (e) => {
-        if (mode === 'view') {
-          L.DomEvent.stopPropagation(e);
-          const popup = e.layer.getPopup();
-          if (!popup) e.layer.openPopup(e.latlng);
-        }
-      });
-
-      routeLayersRef.current.push(routeLayer);
-      mapInstance.current.fitBounds(routeLayer.getBounds());
-
-      return routeLayer;
-    } catch (error) {
-      console.error("Error al renderizar ruta:", error);
-    }
-  };
-
-
-  const handleCreateRouteClick = (e, map) => {
-    const newPoint = {
-      lat: e.latlng.lat,
-      lng: e.latlng.lng,
-      name: `Punto ${routePoints.length + 1}`
-    };
-
-    setRoutePoints([...routePoints, newPoint]);
-
-    if (routePoints.length >= 1) {
-      renderRoute([...routePoints, newPoint]);
-    }
-
-    const marker = L.marker(e.latlng, {
-      icon: L.divIcon({
-        className: 'route-point-marker',
-        html: '<div style="background-color: purple; width: 15px; height: 15px; border-radius: 50%; border: 2px solid white;"></div>',
-        iconSize: [19, 19],
-        iconAnchor: [9, 9]
-      })
-    }).addTo(map);
-
-    markersRef.current.push(marker);
-  };
-
-  // Node management
-  const handleAddPoint = async () => {
-    try {
-      if (!pointData.name || !pointData.description || !clickedPosition) {
-        alert("Por favor complete todos los campos requeridos");
-        return;
-      }
-
-      if (pointData.type === 'control' && !pointData.risk) {
-        alert("Los puntos de control deben tener un nivel de riesgo");
-        return;
-      }
-
-      const pointPayload = {
-        lat: clickedPosition.lat,
-        lng: clickedPosition.lng,
-        name: pointData.name,
-        description: pointData.description,
-        type: pointData.type
-      };
-
-      if (pointData.type === 'control') {
-        pointPayload.risk = parseInt(pointData.risk);
-      }
-
-      await addNode(pointPayload, API_BASE);
-      loadMapNodes();
-      setMode('view');
+    );
+    
+    if (success) {
       setModalOpen(false);
-    } catch (error) {
-      alert(error.message || "Error al guardar el punto");
-    } finally {
       setPointData({
         name: '',
         description: '',
@@ -372,142 +206,64 @@ const MapView = forwardRef(({ onRoutesLoaded = () => { } }, ref) => {
     }
   };
 
-  const handleDeleteNode = async (nodeName) => {
-    try {
-      if (!window.confirm(`¿Estás seguro de que quieres eliminar el punto "${nodeName}"?`)) return;
-      await deleteNode(nodeName, API_BASE);
-      loadMapNodes();
-      if (selectedNode?.name === nodeName) setSelectedNode(null);
-    } catch (error) {
-      alert(error.message || "Error al eliminar el punto");
-    }
-  };
-
-  // Route management
-  const loadMapRoutes = async () => {
-    try {
-      if (!mapInstance.current) return;
-
-      clearRouteLayers();
-
-      const routesData = await loadRoutes(API_BASE);
-      setRoutes(routesData);
-      onRoutesLoaded(routesData);
-
-      for (const route of routesData) {
-        if (route.points?.length >= 2) {
-          await renderRoute(route.points, route);
-        }
-      }
-    } catch (error) {
-      console.error("Error al cargar rutas:", error);
-    }
-  };
-
-  const clearRouteLayers = () => {
-    routeLayersRef.current.forEach(layer => {
-      if (layer && mapInstance.current) {
-        layer.off('click');
-        mapInstance.current.removeLayer(layer);
-      }
-    });
-    routeLayersRef.current = [];
-  };
-
-  const handleDeleteRoute = async (routeName) => {
-    setRouteToDelete(routeName);
-    setDeleteConfirmOpen(true);
-  };
-
+  // Confirmación de eliminación de ruta
   const confirmDeleteRoute = async () => {
     try {
       if (!routeToDelete) return;
-      await deleteRoute(routeToDelete, API_BASE);
-      loadMapRoutes();
-      setSelectedRoute(null);
+      
+      const success = await handleDeleteRoute(
+        routeToDelete, 
+        API_BASE, 
+        () => {
+          loadMapRoutes(
+            mapInstance.current, 
+            routeLayersRef.current, 
+            API_BASE, 
+            OPENROUTE_API_KEY, 
+            setRoutes, 
+            onRoutesLoaded
+          );
+        },
+        selectedRoute,
+        setSelectedRoute
+      );
+      
+      if (success) {
+        setDeleteConfirmOpen(false);
+        setRouteToDelete(null);
+      }
     } catch (error) {
       alert(error.message || "Error al eliminar la ruta");
-    } finally {
       setDeleteConfirmOpen(false);
       setRouteToDelete(null);
     }
   };
 
-  // Node rendering
-  const loadMapNodes = async () => {
-    try {
-      if (!mapInstance.current) return;
-
-      clearMarkers();
-
-      const nodes = await loadNodes(API_BASE);
-      renderNodes(nodes);
-    } catch (error) {
-      console.error("Error al cargar nodos:", error);
-      alert("No se pudo conectar con el servidor. ¿Está corriendo?");
-    }
+  // Manejador de simulación de rutas
+  const onSimulateRoute = (eventData) => {
+    handleSimulateRoute(
+      simulationManagerRef.current, 
+      routeLayersRef.current, 
+      eventData
+    );
   };
 
-  const clearMarkers = () => {
-    markersRef.current.forEach(marker => {
-      if (marker && mapInstance.current) marker.remove();
-    });
-    markersRef.current = [];
-  };
-
-  const renderNodes = (nodes) => {
-    nodes.forEach(node => {
-      const customIcon = createNodeIcon(node);
-      const popupContent = createNodePopupContent(node);
-
-      const marker = L.marker([node.lat, node.lng], { icon: customIcon })
-        .addTo(mapInstance.current)
-        .bindPopup(popupContent);
-
-      marker.on('popupopen', () => setSelectedNode(node));
-      marker.on('popupclose', () => setSelectedNode(null));
-
-      markersRef.current.push(marker);
-    });
-  };
-
- 
-
-  // Handle route simulation
-  const handleSimulateRoute = (eventData) => {
-    const { routeName, speed } = eventData;
-    console.log('Starting simulation with:', { routeName, speed });
-    
-    if (!simulationManagerRef.current) {
-      console.error('Simulation manager not initialized');
-      return;
-    }
-
-    try {
-      // Cerrar todos los popups abiertos
-      routeLayersRef.current.forEach(layer => {
-        if (layer && layer.isPopupOpen()) {
-          layer.closePopup();
-        }
-      });
-      
-      // Iniciar la simulación con la velocidad seleccionada
-      const result = simulationManagerRef.current.startSimulation(routeName, parseInt(speed));
-      console.log('Simulation start result:', result);
-      
-      if (!result.success) {
-        console.error('Failed to start simulation:', result.message);
-      }
-    } catch (error) {
-      console.error('Error starting simulation:', error);
-    }
-  };
-
-  // Event listeners
+  // Eventos globales
   useEffect(() => {
-    const handleDeleteNodeEvent = (e) => handleDeleteNode(e.detail);
-    const handleDeleteRouteEvent = (e) => handleDeleteRoute(e.detail);
-    const handleSimulateRouteEvent = (e) => handleSimulateRoute(e.detail);
+    const handleDeleteNodeEvent = (e) => handleDeleteNode(
+      e.detail, 
+      API_BASE, 
+      () => loadMapNodes(mapInstance.current, markersRef.current, API_BASE, setSelectedNode),
+      selectedNode, 
+      setSelectedNode
+    );
+    
+    const handleDeleteRouteEvent = (e) => {
+      setRouteToDelete(e.detail);
+      setDeleteConfirmOpen(true);
+    };
+    
+    const handleSimulateRouteEvent = (e) => onSimulateRoute(e.detail);
 
     window.addEventListener('deleteNode', handleDeleteNodeEvent);
     window.addEventListener('deleteRoute', handleDeleteRouteEvent);
@@ -518,10 +274,10 @@ const MapView = forwardRef(({ onRoutesLoaded = () => { } }, ref) => {
       window.removeEventListener('deleteRoute', handleDeleteRouteEvent);
       window.removeEventListener('simulateRoute', handleSimulateRouteEvent);
     };
-  }, []);
+  }, [selectedNode]);
 
   return (
-    <>
+        <>
       {mode !== 'view' && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500] bg-white p-2 rounded shadow-lg">
           Modo actual:
@@ -555,7 +311,7 @@ const MapView = forwardRef(({ onRoutesLoaded = () => { } }, ref) => {
           setModalOpen(false);
           setMode('view');
         }}
-        onSubmit={handleAddPoint}
+        onSubmit={onAddPoint}
         disableSubmit={!pointData.name || !pointData.description || !clickedPosition ||
           (pointData.type === 'control' && !pointData.risk)}
       >
@@ -646,7 +402,7 @@ const MapView = forwardRef(({ onRoutesLoaded = () => { } }, ref) => {
       </Modal>
 
       <SimulationController simulationManager={simulationManagerRef.current} />
-    </>
+      </>
   );
 });
 
