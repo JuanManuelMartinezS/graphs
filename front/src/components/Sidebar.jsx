@@ -102,27 +102,36 @@ function Sidebar({
     }
   };
 
-  const handleSubmitRutaPersonalizada2 = async (filtros) => {
+  const handleSubmitRutaPersonalizada2 = async (rutasConColores) => {
     try {
-      const response = await fetch('http://localhost:5000/routes/suggest', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(filtros)
-      });
-
-      const rutasSugeridas = await response.json();
-      console.log("Rutas sugeridas:", rutasSugeridas);
-      
-      if (rutasSugeridas && rutasSugeridas.length > 0) {
-        handleRouteSelected(rutasSugeridas[0].name);
+      if (!rutasConColores || rutasConColores.length === 0) {
+        // Limpiar las rutas si no hay resultados
+        if (mapViewRef.current) {
+          mapViewRef.current.clearHighlightedRoutes();
+        }
+        return;
+      }
+  
+      // Mostrar todas las rutas con sus colores asignados
+      if (mapViewRef.current) {
+        // Primero limpiar cualquier ruta resaltada anteriormente
+        mapViewRef.current.clearHighlightedRoutes();
+        
+        // Dibujar cada ruta con su color correspondiente
+        rutasConColores.forEach(ruta => {
+          mapViewRef.current.showRouteWithColor(ruta.name, ruta.color);
+        });
+  
+        // Opcional: Ajustar la vista para mostrar todas las rutas
+        if (rutasConColores.length > 0) {
+          const firstRoute = rutasConColores[0];
+          mapViewRef.current.showRoutePopup(firstRoute.name);
+        }
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error al mostrar rutas personalizadas:", error);
     }
   };
-
   const handleRouteSelected = (routeName) => {
     const route = routes.find(r => r.name === routeName);
     if (route) {

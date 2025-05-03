@@ -1,15 +1,107 @@
 [
     {
-        "name": "R1",
-        "description": "aa",
+        "name": "uuu",
+        "description": "u",
         "difficulty": 1,
         "popularity": 1,
         "points": [
             {
-                "lat": 5.066308778636779,
-                "lng": -75.51750898361207,
+                "lat": 5.063201392856124,
+                "lng": -75.50933361053468,
+                "nodeName": "asas",
+                "risk": 4,
+                "type": "control"
+            },
+            {
+                "lat": 5.0620044509252144,
+                "lng": -75.50366878509521,
+                "nodeName": "dfdf",
+                "risk": 3,
+                "type": "control"
+            },
+            {
+                "lat": 5.0685876041218085,
+                "lng": -75.49118041992189,
+                "nodeName": "P2",
+                "risk": 4,
+                "type": "control"
+            }
+        ],
+        "graph": {
+            "asas": {
+                "dfdf": 965
+            },
+            "dfdf": {
+                "asas": 965,
+                "P2": 2355
+            },
+            "P2": {
+                "dfdf": 2355
+            }
+        },
+        "distance": 3320,
+        "estimatedTime": 40,
+        "duration": 40,
+        "risk": 3.6666666666666665,
+        "created_at": "2025-05-03T10:14:24.279011"
+    },
+    {
+        "name": "kkk",
+        "description": "k",
+        "difficulty": 4,
+        "popularity": 3,
+        "points": [
+            {
+                "lat": 5.069699038953598,
+                "lng": -75.51199436187746,
+                "nodeName": "P3",
+                "risk": 5,
+                "type": "control"
+            },
+            {
+                "lat": 5.0742730006243075,
+                "lng": -75.49113750457764,
                 "nodeName": "P1",
+                "risk": 3,
+                "type": "control"
+            },
+            {
+                "lat": 5.073415931515608,
+                "lng": -75.50010681152345,
+                "nodeName": "Yo",
                 "type": "interest"
+            }
+        ],
+        "graph": {
+            "P3": {
+                "P1": 3269
+            },
+            "P1": {
+                "P3": 3269,
+                "Yo": 1380
+            },
+            "Yo": {
+                "P1": 1380
+            }
+        },
+        "distance": 4649,
+        "estimatedTime": 56,
+        "duration": 56,
+        "risk": 4.0,
+        "created_at": "2025-05-03T10:14:25.975688"
+    },
+    {
+        "name": "new",
+        "description": "m",
+        "difficulty": 1,
+        "popularity": 1,
+        "points": [
+            {
+                "lat": 5.066144135596127,
+                "lng": -75.5162698030472,
+                "nodeName": "y",
+                "risk": 1,
+                "type": "control"
             },
             {
                 "lat": 5.066897436478597,
@@ -17,75 +109,20 @@
                 "nodeName": "r",
                 "risk": 1,
                 "type": "control"
-            },
-            {
-                "lat": 5.067539359287217,
-                "lng": -75.52058815956117,
-                "nodeName": "l",
-                "risk": 4,
-                "type": "control"
-            },
-            {
-                "lat": 5.069870028757975,
-                "lng": -75.5151504377115,
-                "nodeName": "PI2",
-                "type": "interest"
             }
         ],
         "graph": {
-            "P1": {
-                "r": 347
+            "y": {
+                "r": 499
             },
             "r": {
-                "P1": 347,
-                "l": 136
-            },
-            "l": {
-                "r": 136,
-                "PI2": 840
-            },
-            "PI2": {
-                "l": 840
+                "y": 499
             }
         },
-        "distance": 1323,
-        "estimatedTime": 16,
-        "duration": 16,
-        "risk": 2.5,
-        "created_at": "2025-05-03T09:52:37.976069"
-    },
-    {
-        "name": "R2",
-        "description": "asas",
-        "difficulty": 5,
-        "popularity": 5,
-        "points": [
-            {
-                "lat": 5.066308778636779,
-                "lng": -75.51750898361207,
-                "nodeName": "P1",
-                "type": "interest"
-            },
-            {
-                "lat": 5.066144135596127,
-                "lng": -75.5162698030472,
-                "nodeName": "y",
-                "risk": 1,
-                "type": "control"
-            }
-        ],
-        "graph": {
-            "P1": {
-                "y": 201
-            },
-            "y": {
-                "P1": 201
-            }
-        },
-        "distance": 201,
-        "estimatedTime": 2,
-        "duration": 2,
+        "distance": 499,
+        "estimatedTime": 6,
+        "duration": 6,
         "risk": 1.0,
-        "created_at": "2025-05-03T09:52:38.791801"
+        "created_at": "2025-05-03T10:14:51.533926"
     }
 ]
