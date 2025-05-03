@@ -173,10 +173,23 @@ def delete_node(name):
         except Exception as e:
             return jsonify({"error": str(e)}), 500
         
-@app.route('/routes/<name>', methods=['DELETE', 'OPTIONS'])
-def delete_route(name):
+@app.route('/routes/<name>', methods=['GET', 'DELETE', 'OPTIONS'])
+def handle_route(name):
     if request.method == 'OPTIONS':
         return _build_cors_preflight_response()
+    
+    if request.method == 'GET':
+        try:
+            routes = load_data(ROUTES_FILE)
+            route = next((r for r in routes if r.get('name') == name), None)
+            
+            if not route:
+                return jsonify({"error": f"No se encontró ninguna ruta con el nombre '{name}'"}), 404
+            
+            return jsonify(route), 200
+            
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
     
     if request.method == 'DELETE':
         try:
@@ -199,7 +212,6 @@ def delete_route(name):
             
         except Exception as e:
             return jsonify({"error": str(e)}), 500
-    
 
 @app.route('/routes', methods=['GET', 'POST', 'OPTIONS'])
 def handle_routes():
