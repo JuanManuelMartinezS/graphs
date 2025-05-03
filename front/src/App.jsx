@@ -8,6 +8,7 @@ import Topbar from './components/Topbar';
 
 function App() {
   const mapViewRef = useRef();
+  const sidebarRef = useRef();
   const navigate = useNavigate();
   const [routes, setRoutes] = useState([]);
 
@@ -36,6 +37,8 @@ function App() {
   return (
     <div className="flex h-screen w-screen overflow-hidden">
       <Sidebar 
+        ref={sidebarRef}
+        mapViewRef={mapViewRef}
         onAddPoint={handleAddPoint}
         onCreateRoute={handleCreateRoute}
         routes={routes}

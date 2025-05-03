@@ -1,1 +1,23 @@
 @import "tailwindcss";
+
+/* Estilos para la leyenda de distancias */
+.distance-legend {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+  }
+  
+  .distance-legend h4 {
+    margin-bottom: 10px;
+    color: #333;
+  }
+  
+  /* Estilos para los marcadores de distancia */
+  .distance-label {
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+  }
+  
+  .start-node-marker {
+    font-size: 14px;
+  }

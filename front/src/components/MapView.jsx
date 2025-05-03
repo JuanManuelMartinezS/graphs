@@ -6,6 +6,7 @@ import PointModal from './PointModal';
 import { addNode, deleteNode, loadNodes } from '../services/nodeService';
 import { drawRoute as calculateRoute, loadRoutes, deleteRoute } from '../services/routeService';
 import { startSimulation } from '../services/simulationService';
+import { showMinimumDistances, clearDistanceElements } from '../services/distanceService';
 
 const API_BASE = 'http://localhost:5000';
 const OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e36589d';
@@ -13,6 +14,11 @@ const OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e365
 const MapView = forwardRef(({ onRoutesLoaded = () => { } }, ref) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
+  const distanceElementsRef = useRef({
+    routes: [],
+    markers: [],
+    legend: null
+  });
   const [routePoints, setRoutePoints] = useState([]);
   const [mode, setMode] = useState('view');
   const [clickedPosition, setClickedPosition] = useState(null);
@@ -105,8 +111,28 @@ const MapView = forwardRef(({ onRoutesLoaded = () => { } }, ref) => {
         // Traer al frente
         routeLayer.bringToFront();
       }
+    },
+    showMinimumDistances: async (startNodeName) => {
+      try {
+        const elements = await showMinimumDistances(
+          mapInstance.current, 
+          startNodeName, 
+          API_BASE, 
+          OPENROUTE_API_KEY
+        );
+        distanceElementsRef.current = elements;
+      } catch (error) {
+        alert(`Error: ${error.message}`);
+      }
+    },
+    clearDistanceRoutes: () => {
+      distanceElementsRef.current = clearDistanceElements(
+        mapInstance.current, 
+        distanceElementsRef.current
+      );
     }
   }));
+
 
   // Initialize map
   useEffect(() => {

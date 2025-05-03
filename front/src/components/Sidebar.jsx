@@ -1,11 +1,115 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import RutaPersonalizada from '../sugerenciasRutas/RutaPersonalizada';
+import ModalRutasPersonalizadas from '../sugerenciasRutas/RutasPersonalizadas';
 
-function Sidebar({ onAddPoint, onCreateRoute, routes, onRouteSelected }) {
+function Sidebar({ 
+  mapViewRef, 
+  onAddPoint, 
+  onCreateRoute, 
+  routes, 
+  onRouteSelected 
+}) {
   const [showRutaPersonalizada, setShowRutaPersonalizada] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [showExperienciaSelect, setShowExperienciaSelect] = useState(false);
   const [selectedExperiencia, setSelectedExperiencia] = useState(null);
+  const [showModalPersonalizada, setShowModalPersonalizada] = useState(false);
+  const [showModalPersonalizada2, setShowModalPersonalizada2] = useState(false);
+
+  const handleMinimumDistances = async () => {
+    try {
+      // Obtener nodos de interés
+      const response = await fetch('http://localhost:5000/nodes');
+      if (!response.ok) throw new Error("Error al obtener nodos");
+      const allNodes = await response.json();
+      const interestNodes = allNodes.filter(node => node.type === 'interest');
+      
+      if (interestNodes.length === 0) {
+        alert('No hay puntos de interés en el mapa');
+        return;
+      }
+      
+      // Crear modal para seleccionar el punto de interés
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;';
+      
+      const modalContent = document.createElement('div');
+      modalContent.style.cssText = 'background: white; padding: 20px; border-radius: 8px; width: 300px;';
+      
+      const title = document.createElement('h3');
+      title.textContent = 'Seleccionar Punto de Interés';
+      title.style.marginTop = '0';
+      modalContent.appendChild(title);
+      
+      const select = document.createElement('select');
+      select.style.cssText = 'width: 100%; padding: 8px; margin: 10px 0;';
+      
+      interestNodes.forEach(node => {
+        const option = document.createElement('option');
+        option.value = node.name;
+        option.textContent = node.name;
+        select.appendChild(option);
+      });
+      
+      modalContent.appendChild(select);
+      
+      const buttonContainer = document.createElement('div');
+      buttonContainer.style.cssText = 'display: flex; justify-content: space-between; margin-top: 15px;';
+      
+      const okButton = document.createElement('button');
+      okButton.textContent = 'Aceptar';
+      okButton.style.cssText = 'padding: 8px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;';
+      
+      const cancelButton = document.createElement('button');
+      cancelButton.textContent = 'Cancelar';
+      cancelButton.style.cssText = 'padding: 8px 15px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;';
+      
+      buttonContainer.appendChild(okButton);
+      buttonContainer.appendChild(cancelButton);
+      modalContent.appendChild(buttonContainer);
+      
+      modal.appendChild(modalContent);
+      document.body.appendChild(modal);
+      
+      // Manejar eventos
+      okButton.addEventListener('click', () => {
+        const selectedNode = select.value;
+        if (mapViewRef.current) {
+          mapViewRef.current.showMinimumDistances(selectedNode);
+        }
+        modal.remove();
+      });
+      
+      cancelButton.addEventListener('click', () => {
+        modal.remove();
+      });
+      
+    } catch (error) {
+      console.error("Error al seleccionar punto de interés:", error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  const handleSubmitRutaPersonalizada2 = async (filtros) => {
+    try {
+      const response = await fetch('http://localhost:5000/routes/suggest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(filtros)
+      });
+
+      const rutasSugeridas = await response.json();
+      console.log("Rutas sugeridas:", rutasSugeridas);
+      
+      if (rutasSugeridas && rutasSugeridas.length > 0) {
+        handleRouteSelected(rutasSugeridas[0].name);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
 
   const handleRouteSelected = (routeName) => {
     const route = routes.find(r => r.name === routeName);
@@ -19,13 +123,11 @@ function Sidebar({ onAddPoint, onCreateRoute, routes, onRouteSelected }) {
     setSelectedExperiencia(nivel);
     setShowExperienciaSelect(false);
 
-    // Buscar la ruta con dificultad más cercana al nivel seleccionado
     const rutasConDiferencia = routes.map(route => ({
       ...route,
       diferencia: Math.abs(route.difficulty - nivel)
     }));
 
-    // Ordenar por diferencia y seleccionar la primera
     const rutaRecomendada = [...rutasConDiferencia].sort((a, b) => a.diferencia - b.diferencia)[0];
 
     if (rutaRecomendada) {
@@ -41,7 +143,6 @@ function Sidebar({ onAddPoint, onCreateRoute, routes, onRouteSelected }) {
       return;
     }
 
-    // Buscar la ruta con menor riesgo
     const rutasOrdenadasPorRiesgo = [...routes].sort((a, b) => a.risk - b.risk);
     const rutaMenosPeligrosa = rutasOrdenadasPorRiesgo[0];
 
@@ -95,11 +196,17 @@ function Sidebar({ onAddPoint, onCreateRoute, routes, onRouteSelected }) {
         Ruta personalizada
       </button>
 
-      <button className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition">
-        Ruta personalizada 2
+      <button 
+        className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
+        onClick={() => setShowModalPersonalizada2(true)}
+      >
+        Rutas personalizadas
       </button>
 
-      <button className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition">
+      <button 
+        className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
+        onClick={handleMinimumDistances}
+      >
         Recomendar distancias mínimas
       </button>
 
@@ -115,6 +222,13 @@ function Sidebar({ onAddPoint, onCreateRoute, routes, onRouteSelected }) {
         onClose={() => setShowRutaPersonalizada(false)}
         routes={routes}
         onRouteSelected={handleRouteSelected}
+      />
+      
+      <ModalRutasPersonalizadas
+        isOpen={showModalPersonalizada2}
+        onClose={() => setShowModalPersonalizada2(false)}
+        onSubmit={handleSubmitRutaPersonalizada2}
+        routes={routes}
       />
     </div>
   );

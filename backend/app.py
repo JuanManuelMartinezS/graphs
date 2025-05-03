@@ -6,7 +6,7 @@ from datetime import datetime
 from grafo import Graph
 from math import radians, sin, cos, sqrt, atan2
 import requests
-
+from functools import lru_cache
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -18,6 +18,10 @@ ROUTES_FILE = os.path.join(DATA_DIR, 'routes.json')
 OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e36589d'
 # Asegurar que el directorio existe
 os.makedirs(DATA_DIR, exist_ok=True)
+
+@lru_cache(maxsize=32)
+def load_routes_cached():
+    return load_data(ROUTES_FILE)
 
 # Helper functions
 def load_data(filename):
@@ -321,6 +325,191 @@ def handle_routes():
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
+@app.route('/routes/suggest', methods=['POST', 'OPTIONS'])
+def suggest_routes():
+    if request.method == 'OPTIONS':
+        return _build_cors_preflight_response()
+    
+    if request.method == 'POST':
+        try:
+            # Obtener y validar filtros
+            filters = request.get_json()
+            if not all(key in filters for key in ['duracion', 'dificultad', 'experiencia']):
+                return jsonify({"error": "Faltan filtros requeridos"}), 400
+            
+            try:
+                duracion_deseada = float(filters['duracion'])
+                dificultad_deseada = int(filters['dificultad'])
+                experiencia_usuario = int(filters['experiencia'])
+            except ValueError:
+                return jsonify({"error": "Los filtros deben ser números válidos"}), 400
+            
+            # Validar rangos
+            if not (1 <= dificultad_deseada <= 5) or not (1 <= experiencia_usuario <= 5):
+                return jsonify({"error": "Dificultad y experiencia deben estar entre 1 y 5"}), 400
+            
+            # Cargar todas las rutas
+            all_routes = load_data(ROUTES_FILE)
+            if not all_routes:
+                return jsonify({"error": "No hay rutas disponibles"}), 404
+            
+            # Ajustar la dificultad deseada según la experiencia del usuario
+            # Si el usuario es principiante (experiencia=1), reducimos la dificultad máxima aceptable
+            # Si el usuario es experto (experiencia=5), podemos aumentar la dificultad máxima
+            dificultad_ajustada = dificultad_deseada * (experiencia_usuario / 3)  # Factor de ajuste basado en experiencia
+            dificultad_ajustada = max(1, min(5, dificultad_ajustada))  # Mantener entre 1 y 5
+            
+            # Margen de aceptación para la dificultad (±1)
+            dificultad_min = max(1, round(dificultad_ajustada) - 1)
+            dificultad_max = min(5, round(dificultad_ajustada) + 1)
+            
+            # Margen de aceptación para la duración (±25% o mínimo 10 minutos)
+            margen_duracion = max(10, duracion_deseada * 0.25)
+            duracion_min = max(1, duracion_deseada - margen_duracion)
+            duracion_max = duracion_deseada + margen_duracion
+            
+            # Filtrar y puntuar rutas
+            rutas_filtradas = []
+            for route in all_routes:
+                route_duration = route.get('duration', 0)
+                route_difficulty = route.get('difficulty', 3)
+                
+                # Verificar si cumple con los rangos de dificultad y duración
+                if (dificultad_min <= route_difficulty <= dificultad_max and
+                    duracion_min <= route_duration <= duracion_max):
+                    
+                    # Calcular puntuación de coincidencia (0-1, donde 1 es mejor)
+                    # Ponderación: 60% dificultad, 40% duración
+                    diff_score = 1 - (abs(route_difficulty - dificultad_ajustada) / 5)
+                    duration_score = 1 - (abs(route_duration - duracion_deseada) / duracion_deseada)
+                    
+                    total_score = 0.6 * diff_score + 0.4 * duration_score
+                    
+                    rutas_filtradas.append({
+                        'route': route,
+                        'score': total_score,
+                        'duration_diff': abs(route_duration - duracion_deseada),
+                        'difficulty_diff': abs(route_difficulty - dificultad_ajustada)
+                    })
+            
+            # Ordenar rutas por puntuación (mejores primero) y luego por duración más cercana
+            rutas_filtradas.sort(key=lambda x: (-x['score'], x['duration_diff']))
+            
+            # Limitar a las 5 mejores rutas
+            best_routes = [x['route'] for x in rutas_filtradas[:5]]
+            
+            if not best_routes:
+                return jsonify({
+                    "error": "No se encontraron rutas que cumplan los criterios",
+                    "suggestion": "Intenta ampliar el rango de duración o dificultad"
+                }), 404
+            
+            return jsonify(best_routes), 200
+            
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+@app.route('/shortest-distances', methods=['POST', 'OPTIONS'])
+def get_shortest_distances():
+    if request.method == 'OPTIONS':
+        return _build_cors_preflight_response()
+    
+    try:
+        data = request.get_json()
+        
+        if not data or 'nodes' not in data or not data['nodes'] or 'startNodeName' not in data:
+            return jsonify({"error": "Se requieren los nodos y el nombre del nodo de inicio"}), 400
+        
+        nodes = data['nodes']
+        start_node_name = data['startNodeName']
+        
+        # Verificar que el nodo de inicio existe
+        start_node = next((node for node in nodes if node.get('name') == start_node_name), None)
+        if not start_node:
+            return jsonify({"error": f"No se encontró el nodo de inicio '{start_node_name}'"}), 404
+        
+        # Verificar que el nodo de inicio es de tipo interés
+        if start_node.get('type') != 'interest':
+            return jsonify({"error": "El nodo de inicio debe ser de tipo 'interest'"}), 400
+        
+        # Construir el grafo intermedio conectando todos los nodos
+        graph = Graph()
+        
+        # Añadir todos los nodos al grafo
+        for node in nodes:
+            graph.add_node(node['name'])
+        
+        # Conectar cada nodo con todos los demás nodos (grafo completo)
+        for i, node1 in enumerate(nodes):
+            for j, node2 in enumerate(nodes):
+                if i != j:  # No conectar un nodo consigo mismo
+                    coord1 = [node1['lng'], node1['lat']]
+                    coord2 = [node2['lng'], node2['lat']]
+                    
+                    # Calcular distancia entre nodos
+                    distance = get_ors_distance(coord1, coord2, OPENROUTE_API_KEY)
+                    
+                    # Añadir arista con su peso (distancia)
+                    graph.add_edge(node1['name'], node2['name'], weight=distance)
+        
+        # Aplicar Dijkstra para obtener distancias mínimas desde el nodo inicial
+        distances = graph.dijkstra(start_node_name)
+        
+        # Filtrar resultados para incluir solo nodos de interés (no puntos de control)
+        interest_distances = {}
+        for node in nodes:
+            node_name = node['name']
+            node_type = node.get('type')
+            
+            # Incluir solo nodos de interés (y no el nodo inicial)
+            if node_type == 'interest' and node_name != start_node_name:
+                if node_name in distances:
+                    interest_distances[node_name] = {
+                        'distance': distances[node_name],
+                        'lat': node['lat'],
+                        'lng': node['lng']
+                    }
+        
+        # Categorizar las distancias para asignar colores
+        if interest_distances:
+            distances_values = [info['distance'] for info in interest_distances.values()]
+            min_dist = min(distances_values)
+            max_dist = max(distances_values)
+            
+            # Crear rangos para asignar colores
+            range_size = (max_dist - min_dist) / 5 if max_dist > min_dist else 1
+            
+            # Asignar colores según el rango de distancia
+            for node_name, info in interest_distances.items():
+                distance = info['distance']
+                
+                # Calcular categoría (0-4, donde 0 es más cercano y 4 más lejano)
+                if max_dist == min_dist:
+                    category = 0  # Si todas las distancias son iguales, usar una categoría
+                else:
+                    category = min(4, int((distance - min_dist) / range_size))
+                
+                # Colores por categoría
+                colors = ["#00FF00", "#88FF00", "#FFFF00", "#FF8800", "#FF0000"]  # Verde a rojo
+                
+                # Añadir color a la información del nodo
+                interest_distances[node_name]['color'] = colors[category]
+        
+        # Preparar respuesta
+        result = {
+            'startNode': start_node_name,
+            'distances': interest_distances,
+            'info': {
+                'totalNodes': len(nodes),
+                'interestNodes': sum(1 for node in nodes if node.get('type') == 'interest')
+            }
+        }
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+        
 def _build_cors_preflight_response():
     response = jsonify({"message": "Preflight OK"})
     response.headers.add("Access-Control-Allow-Origin", "*")
