@@ -11,7 +11,7 @@ import { initSimulationManager, cleanupSimulationManager } from '../services/sim
 const API_BASE = 'http://localhost:5000';
 const OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e36589d';
 
-const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
+const MapView = forwardRef(({ onRoutesLoaded = () => { } }, ref) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
   const simulationManagerRef = useRef(null);
@@ -42,19 +42,20 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
       markersRef.current = [];
     },
     highlightRoute: (route) => {
+      // Restablece todas las rutas resaltadas
       routeLayersRef.current.forEach(layer => {
         if (layer.highlighted) {
-          layer.setStyle({ color: '#0066ff' });
+          layer.setStyle({ color: '#0066ff' }); // Color normal
           layer.highlighted = false;
         }
       });
-
+      // Encuentra y resalta la nueva ruta
       const routeLayer = routeLayersRef.current.find(
         layer => layer.routeData?.name === route.name
       );
 
       if (routeLayer) {
-        routeLayer.setStyle({ color: '#ff0000', weight: 7 });
+        routeLayer.setStyle({ color: '#ff0000', weight: 7 }); // Color rojo para resaltar, y aumenta el grosor
         routeLayer.highlighted = true;
         routeLayer.openPopup();
         mapInstance.current?.fitBounds(routeLayer.getBounds());
@@ -62,28 +63,48 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
     },
     showRoutePopup: (routeName) => {
       if (!mapInstance.current) return;
-
+      // 1. Restaurar todas las rutas a estilo normal
       routeLayersRef.current.forEach(layer => {
         if (!layer || !mapInstance.current.hasLayer(layer)) return;
+
         if (layer.highlighted) {
-          layer.setStyle({ color: '#0066ff', weight: 5, opacity: 0.8 });
+          layer.setStyle({
+            color: '#0066ff', // Azul estándar
+            weight: 5,        // Grosor normal
+            opacity: 0.8
+          });
           layer.highlighted = false;
         }
-        if (layer.isPopupOpen()) layer.closePopup();
+
+        if (layer.isPopupOpen()) {
+          layer.closePopup();
+        }
       });
 
+      // 2. Encontrar y resaltar la nueva ruta
       const routeLayer = routeLayersRef.current.find(
         layer => layer && layer.routeData?.name === routeName
       );
 
       if (routeLayer) {
-        routeLayer.setStyle({ color: '#ff0000', weight: 7, opacity: 1 });
+        // Aplicar nuevo estilo resaltado
+        routeLayer.setStyle({
+          color: '#ff0000',  // Rojo
+          weight: 7,         // Más grueso
+          opacity: 1         // Más opaco
+        });
+
+        // Marcar como resaltada
         routeLayer.highlighted = true;
+
+        // Mostrar popup y ajustar vista
         routeLayer.openPopup();
         mapInstance.current.fitBounds(routeLayer.getBounds(), {
-          padding: [50, 50],
-          animate: true
+          padding: [50, 50], // Espaciado
+          animate: true      // Animación suave
         });
+
+        // Traer al frente
         routeLayer.bringToFront();
       }
     },
@@ -189,13 +210,13 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
       const routeLayer = L.geoJSON(routeGeometry, {
         style: { color: '#0066ff', weight: 5, opacity: 0.8 }
       }).addTo(mapInstance.current);
-    
+
       routeLayer.highlighted = false;
       routeLayer.routeData = routeData;
 
       if (routeData) {
         const popupContent = createRoutePopupContent(routeData);
-        routeLayer.bindPopup(popupContent, { 
+        routeLayer.bindPopup(popupContent, {
           maxWidth: 300,
           className: 'route-popup'
         });
@@ -254,13 +275,13 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
       lng: e.latlng.lng,
       name: `Punto ${routePoints.length + 1}`
     };
-    
+
     setRoutePoints([...routePoints, newPoint]);
-    
+
     if (routePoints.length >= 1) {
       renderRoute([...routePoints, newPoint]);
     }
-    
+
     const marker = L.marker(e.latlng, {
       icon: L.divIcon({
         className: 'route-point-marker',
@@ -269,7 +290,7 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
         iconAnchor: [9, 9]
       })
     }).addTo(map);
-    
+
     markersRef.current.push(marker);
   };
 
@@ -280,12 +301,12 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
         alert("Por favor complete todos los campos requeridos");
         return;
       }
-      
+
       if (pointData.type === 'control' && !pointData.risk) {
         alert("Los puntos de control deben tener un nivel de riesgo");
         return;
       }
-      
+
       const pointPayload = {
         lat: clickedPosition.lat,
         lng: clickedPosition.lng,
@@ -293,11 +314,11 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
         description: pointData.description,
         type: pointData.type
       };
-      
+
       if (pointData.type === 'control') {
         pointPayload.risk = parseInt(pointData.risk);
       }
-      
+
       await addNode(pointPayload, API_BASE);
       loadMapNodes();
       setMode('view');
@@ -329,13 +350,13 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
   const loadMapRoutes = async () => {
     try {
       if (!mapInstance.current) return;
-      
+
       clearRouteLayers();
-      
+
       const routesData = await loadRoutes(API_BASE);
       setRoutes(routesData);
       onRoutesLoaded(routesData);
-      
+
       for (const route of routesData) {
         if (route.points?.length >= 2) {
           await renderRoute(route.points, route);
@@ -379,9 +400,9 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
   const loadMapNodes = async () => {
     try {
       if (!mapInstance.current) return;
-  
+
       clearMarkers();
-  
+
       const nodes = await loadNodes(API_BASE);
       renderNodes(nodes);
     } catch (error) {
@@ -401,14 +422,14 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
     nodes.forEach(node => {
       const customIcon = createNodeIcon(node);
       const popupContent = createNodePopupContent(node);
-      
-      const marker = L.marker([node.lat, node.lng], {icon: customIcon})
+
+      const marker = L.marker([node.lat, node.lng], { icon: customIcon })
         .addTo(mapInstance.current)
         .bindPopup(popupContent);
-      
+
       marker.on('popupopen', () => setSelectedNode(node));
       marker.on('popupclose', () => setSelectedNode(null));
-      
+
       markersRef.current.push(marker);
     });
   };
@@ -424,7 +445,7 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
         iconAnchor: [12, 12]
       });
     }
-    
+
     const markerColor = {
       1: 'green',
       2: 'blue',
@@ -432,7 +453,7 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
       4: 'orange',
       5: 'red'
     }[node.risk] || 'blue';
-    
+
     return L.divIcon({
       className: 'custom-marker',
       html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; display: flex; justify-content: center; align-items: center;">
@@ -502,7 +523,7 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
     window.addEventListener('deleteNode', handleDeleteNodeEvent);
     window.addEventListener('deleteRoute', handleDeleteRouteEvent);
     window.addEventListener('simulateRoute', handleSimulateRouteEvent);
-    
+
     return () => {
       window.removeEventListener('deleteNode', handleDeleteNodeEvent);
       window.removeEventListener('deleteRoute', handleDeleteRouteEvent);
@@ -514,18 +535,18 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
     <>
       {mode !== 'view' && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500] bg-white p-2 rounded shadow-lg">
-          Modo actual: 
+          Modo actual:
           <span className="font-bold ml-1">
             {mode === 'addPoint' ? 'Añadir Punto' : 'Crear Ruta'}
           </span>
-          
+
           {mode === 'createRoute' && routePoints.length > 0 && (
             <span className="ml-2 text-sm">
               Puntos seleccionados: {routePoints.length}
             </span>
           )}
-          
-          <button 
+
+          <button
             onClick={() => {
               setMode('view');
               setRoutePoints([]);
@@ -538,16 +559,16 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
       )}
 
       <div ref={mapRef} className="absolute inset-0 z-0" />
-      
-      <PointModal 
+
+      <PointModal
         isOpen={modalOpen}
         onClose={() => {
           setModalOpen(false);
           setMode('view');
         }}
         onSubmit={handleAddPoint}
-        disableSubmit={!pointData.name || !pointData.description || !clickedPosition || 
-                      (pointData.type === 'control' && !pointData.risk)}
+        disableSubmit={!pointData.name || !pointData.description || !clickedPosition ||
+          (pointData.type === 'control' && !pointData.risk)}
       >
         <h2 className="text-xl font-bold mb-4">Añadir nuevo punto</h2>
         <div className="space-y-4">
@@ -556,7 +577,7 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
             <select
               className="w-full p-2 border rounded"
               value={pointData.type}
-              onChange={(e) => setPointData({...pointData, type: e.target.value, risk: e.target.value === 'control' ? pointData.risk : ''})}
+              onChange={(e) => setPointData({ ...pointData, type: e.target.value, risk: e.target.value === 'control' ? pointData.risk : '' })}
               required
             >
               <option value="control">Punto de control</option>
@@ -569,7 +590,7 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
               type="text"
               className="w-full p-2 border rounded"
               value={pointData.name}
-              onChange={(e) => setPointData({...pointData, name: e.target.value})}
+              onChange={(e) => setPointData({ ...pointData, name: e.target.value })}
               required
             />
           </div>
@@ -578,7 +599,7 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
             <textarea
               className="w-full p-2 border rounded"
               value={pointData.description}
-              onChange={(e) => setPointData({...pointData, description: e.target.value})}
+              onChange={(e) => setPointData({ ...pointData, description: e.target.value })}
               required
             />
           </div>
@@ -588,7 +609,7 @@ const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
               <select
                 className="w-full p-2 border rounded"
                 value={pointData.risk}
-                onChange={(e) => setPointData({...pointData, risk: e.target.value})}
+                onChange={(e) => setPointData({ ...pointData, risk: e.target.value })}
                 required={pointData.type === 'control'}
               >
                 <option value="1">1 - Muy bajo</option>

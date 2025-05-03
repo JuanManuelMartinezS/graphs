@@ -46,25 +46,25 @@ export const loadRoutesAndNodes = async () => {
 export const loadDataFromFile = async (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    
+
     reader.onload = (event) => {
       try {
         const data = JSON.parse(event.target.result);
-        
+
         // Si es un objeto con routes y nodes directamente
         if (data && typeof data === 'object' && data.routes && data.nodes) {
           resolve(data);
-        } 
+        }
         // Comprobar si el formato es de una exportación antigua (sin estructura anidada)
         else {
           // Intenta dar formato a los datos si no tienen la estructura esperada
           console.log("Intentando interpretar formato de datos alternativo...");
-          
+
           let formattedData = {
             routes: [],
             nodes: []
           };
-          
+
           // Comprueba diferentes posibilidades de estructura
           if (Array.isArray(data)) {
             // Si es un array, podría ser solo nodos o solo rutas
@@ -79,12 +79,12 @@ export const loadDataFromFile = async (file) => {
               }
             }
           }
-          
+
           // Si alguno de los arrays sigue vacío, podríamos tener un formato diferente
           if (formattedData.routes.length === 0 || formattedData.nodes.length === 0) {
             throw new Error("El archivo no tiene el formato esperado.");
           }
-          
+
           resolve(formattedData);
         }
       } catch (error) {
@@ -92,11 +92,11 @@ export const loadDataFromFile = async (file) => {
         reject(new Error(`Error al procesar el archivo: ${error.message}`));
       }
     };
-    
+
     reader.onerror = () => {
       reject(new Error("Error al leer el archivo"));
     };
-    
+
     reader.readAsText(file);
   });
 };
@@ -128,7 +128,7 @@ export const saveRoute = async (routeData) => {
 export const saveRoutes = async (routes) => {
   try {
     console.log("Guardando rutas:", routes.length);
-    
+
     // Guardamos cada ruta individualmente usando la API existente
     const results = [];
     for (const route of routes) {
@@ -140,7 +140,7 @@ export const saveRoutes = async (routes) => {
         // Continuamos con la siguiente ruta
       }
     }
-    
+
     console.log(`Rutas guardadas correctamente: ${results.length} de ${routes.length}`);
     return { success: true, saved: results.length, total: routes.length };
   } catch (error) {
@@ -176,7 +176,7 @@ export const saveNode = async (nodeData) => {
 export const saveNodes = async (nodes) => {
   try {
     console.log("Guardando nodos:", nodes.length);
-    
+
     // Guardamos cada nodo individualmente usando la API existente
     const results = [];
     for (const node of nodes) {
@@ -188,7 +188,7 @@ export const saveNodes = async (nodes) => {
         // Continuamos con el siguiente nodo
       }
     }
-    
+
     console.log(`Nodos guardados correctamente: ${results.length} de ${nodes.length}`);
     return { success: true, saved: results.length, total: nodes.length };
   } catch (error) {
@@ -240,20 +240,20 @@ export const exportDataToFile = async () => {
   try {
     // Cargar rutas y nodos
     const data = await loadRoutesAndNodes();
-    
+
     // Generar JSON con ambos datos
     const dataStr = JSON.stringify(data, null, 2);
     const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
-    
-    const exportName = `datos_bici_${new Date().toISOString().slice(0,10)}.json`;
-    
+
+    const exportName = `datos_bici_${new Date().toISOString().slice(0, 10)}.json`;
+
     const link = document.createElement('a');
     link.setAttribute('href', dataUri);
     link.setAttribute('download', exportName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     return true;
   } catch (error) {
     console.error("Error al exportar datos:", error);
@@ -267,16 +267,16 @@ export const exportRoutesToFile = async () => {
     const routes = await loadRoutes();
     const routesStr = JSON.stringify(routes, null, 2);
     const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(routesStr)}`;
-    
-    const exportName = `rutas_bici_${new Date().toISOString().slice(0,10)}.json`;
-    
+
+    const exportName = `rutas_bici_${new Date().toISOString().slice(0, 10)}.json`;
+
     const link = document.createElement('a');
     link.setAttribute('href', dataUri);
     link.setAttribute('download', exportName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     return true;
   } catch (error) {
     console.error("Error al exportar rutas:", error);
@@ -288,15 +288,15 @@ export const exportRoutesToFile = async () => {
 export const loadRoutesFromFile = async (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    
+
     reader.onload = (event) => {
       try {
         const data = JSON.parse(event.target.result);
-        
+
         // Si es un array, asumimos que son solo rutas
         if (Array.isArray(data)) {
           resolve(data);
-        } 
+        }
         // Si es un objeto con propiedad routes, extraemos las rutas
         else if (data && data.routes && Array.isArray(data.routes)) {
           resolve(data.routes);
@@ -308,11 +308,11 @@ export const loadRoutesFromFile = async (file) => {
         reject(error);
       }
     };
-    
+
     reader.onerror = () => {
       reject(new Error("Error al leer el archivo"));
     };
-    
+
     reader.readAsText(file);
   });
 };
@@ -320,7 +320,7 @@ export const loadRoutesFromFile = async (file) => {
 export const drawRoute = async (points, routeData, OPENROUTE_API_KEY) => {
   try {
     const coordinates = points.map(point => [point.lng, point.lat]);
-    
+
     const response = await fetch('https://api.openrouteservice.org/v2/directions/foot-walking/geojson', {
       method: 'POST',
       headers: {

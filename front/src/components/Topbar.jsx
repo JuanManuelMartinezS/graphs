@@ -1,10 +1,10 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  exportDataToFile, 
-  loadDataFromFile, 
-  saveNodes, 
-  saveRoutes 
+import {
+  exportDataToFile,
+  loadDataFromFile,
+  saveNodes,
+  saveRoutes
 } from '../services/routeService';
 
 function Topbar() {
@@ -26,19 +26,19 @@ function Topbar() {
 
     try {
       const data = await loadDataFromFile(file);
-      
+
       // Validar estructura básica de los datos
       if (!data.routes || !data.nodes) {
         throw new Error("El archivo no contiene datos válidos (debe tener 'routes' y 'nodes')");
       }
-      
+
       if (window.confirm(`¿Desea cargar ${data.nodes.length} nodos y ${data.routes.length} rutas desde el archivo?`)) {
         // Guardamos primero los nodos y luego las rutas para mantener referencias
         const nodesResult = await saveNodes(data.nodes);
         const routesResult = await saveRoutes(data.routes);
-        
+
         alert('Datos cargados con éxito. Recargando página...');
-        
+
         // Recargar la página para mostrar los nuevos datos
         window.location.reload();
       }
@@ -52,13 +52,13 @@ function Topbar() {
 
   return (
     <div className="bg-gray-800 text-white p-4 flex space-x-4 shadow-md z-10">
-      <button 
+      <button
         className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded transition"
         onClick={handleExport}
       >
         Exportar datos
       </button>
-      
+
       <input
         type="file"
         ref={fileInputRef}
@@ -66,20 +66,20 @@ function Topbar() {
         accept=".json"
         style={{ display: 'none' }}
       />
-      <button 
+      <button
         className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded transition"
         onClick={() => fileInputRef.current.click()}
       >
         Cargar Rutas predefinidas
       </button>
-      
-      <button 
+
+      <button
         className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded transition"
         onClick={() => navigate('/add-route')}
       >
         Crear ruta
       </button>
-      
+
       <button className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded transition">
         Cambiar experiencia
       </button>

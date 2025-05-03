@@ -18,16 +18,16 @@ function Sidebar({ onAddPoint, onCreateRoute, routes, onRouteSelected }) {
   const handleExperienciaSelect = (nivel) => {
     setSelectedExperiencia(nivel);
     setShowExperienciaSelect(false);
-    
+
     // Buscar la ruta con dificultad más cercana al nivel seleccionado
     const rutasConDiferencia = routes.map(route => ({
       ...route,
       diferencia: Math.abs(route.difficulty - nivel)
     }));
-    
+
     // Ordenar por diferencia y seleccionar la primera
     const rutaRecomendada = [...rutasConDiferencia].sort((a, b) => a.diferencia - b.diferencia)[0];
-    
+
     if (rutaRecomendada) {
       handleRouteSelected(rutaRecomendada.name);
     } else {
@@ -56,13 +56,13 @@ function Sidebar({ onAddPoint, onCreateRoute, routes, onRouteSelected }) {
   return (
     <div className="w-64 bg-gray-700 text-white p-4 space-y-2 overflow-y-auto h-full">
       <div className="relative">
-        <button 
+        <button
           className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
           onClick={() => setShowExperienciaSelect(!showExperienciaSelect)}
         >
           Ruta según experiencia
         </button>
-        
+
         {showExperienciaSelect && (
           <div className="absolute z-10 mt-1 w-full bg-white rounded shadow-lg">
             <select
@@ -80,37 +80,37 @@ function Sidebar({ onAddPoint, onCreateRoute, routes, onRouteSelected }) {
           </div>
         )}
       </div>
-      
-      <button 
+
+      <button
         className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
         onClick={handleRutaMenosPeligrosa}
       >
         Ruta menos peligrosa
       </button>
-      
-      <button 
+
+      <button
         className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
         onClick={() => setShowRutaPersonalizada(true)}
       >
         Ruta personalizada
       </button>
-      
+
       <button className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition">
         Ruta personalizada 2
       </button>
-      
+
       <button className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition">
         Recomendar distancias mínimas
       </button>
-      
-      <button 
+
+      <button
         className="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded transition"
         onClick={onAddPoint}
       >
         Añadir punto
       </button>
 
-      <RutaPersonalizada 
+      <RutaPersonalizada
         isOpen={showRutaPersonalizada}
         onClose={() => setShowRutaPersonalizada(false)}
         routes={routes}
