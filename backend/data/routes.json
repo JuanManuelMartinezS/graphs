@@ -43,7 +43,7 @@
         "estimatedTime": 40,
         "duration": 40,
         "risk": 3.6666666666666665,
-        "created_at": "2025-05-02T14:16:16.742930"
+        "created_at": "2025-05-02T19:37:09.199380"
     },
     {
         "name": "kkk",
@@ -88,6 +88,41 @@
         "estimatedTime": 56,
         "duration": 56,
         "risk": 4.0,
-        "created_at": "2025-05-02T14:17:09.061170"
+        "created_at": "2025-05-02T19:37:10.827526"
+    },
+    {
+        "name": "peque\u00f1a",
+        "description": "a",
+        "difficulty": 3,
+        "popularity": 5,
+        "points": [
+            {
+                "lat": 5.0620044509252144,
+                "lng": -75.50366878509521,
+                "nodeName": "dfdf",
+                "risk": 3,
+                "type": "control"
+            },
+            {
+                "lat": 5.062192058737969,
+                "lng": -75.49551486968996,
+                "nodeName": "aa",
+                "risk": 1,
+                "type": "control"
+            }
+        ],
+        "graph": {
+            "dfdf": {
+                "aa": 1376
+            },
+            "aa": {
+                "dfdf": 1376
+            }
+        },
+        "distance": 1376,
+        "estimatedTime": 17,
+        "duration": 17,
+        "risk": 2.0,
+        "created_at": "2025-05-02T19:38:06.848064"
     }
 ]

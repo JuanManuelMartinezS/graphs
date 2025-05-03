@@ -316,3 +316,33 @@ export const loadRoutesFromFile = async (file) => {
     reader.readAsText(file);
   });
 };
+
+export const drawRoute = async (points, routeData, OPENROUTE_API_KEY) => {
+  try {
+    const coordinates = points.map(point => [point.lng, point.lat]);
+    
+    const response = await fetch('https://api.openrouteservice.org/v2/directions/foot-walking/geojson', {
+      method: 'POST',
+      headers: {
+        'Authorization': OPENROUTE_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        coordinates: coordinates,
+        elevation: false,
+        instructions: false,
+        preference: 'recommended',
+        units: 'm'
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error en la respuesta: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error al calcular la ruta:", error);
+    throw error;
+  }
+};

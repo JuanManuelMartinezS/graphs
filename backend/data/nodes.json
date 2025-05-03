@@ -59,5 +59,14 @@
         "name": "P2",
         "risk": 4,
         "type": "control"
+    },
+    {
+        "lat": 5.062192058737969,
+        "lng": -75.49551486968996,
+        "name": "aa",
+        "description": "a",
+        "type": "control",
+        "risk": 1,
+        "created_at": "2025-05-02T19:37:36.655693"
     }
 ]
