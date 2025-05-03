@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Modal from '../components/Modal';
+import Modal from '../components/ui/Modal';
 
 const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit }) => {
   const [filtros, setFiltros] = useState({

@@ -1,1 +1,91 @@
-[]
+[
+    {
+        "name": "R1",
+        "description": "aa",
+        "difficulty": 1,
+        "popularity": 1,
+        "points": [
+            {
+                "lat": 5.066308778636779,
+                "lng": -75.51750898361207,
+                "nodeName": "P1",
+                "type": "interest"
+            },
+            {
+                "lat": 5.066897436478597,
+                "lng": -75.51988542079927,
+                "nodeName": "r",
+                "risk": 1,
+                "type": "control"
+            },
+            {
+                "lat": 5.067539359287217,
+                "lng": -75.52058815956117,
+                "nodeName": "l",
+                "risk": 4,
+                "type": "control"
+            },
+            {
+                "lat": 5.069870028757975,
+                "lng": -75.5151504377115,
+                "nodeName": "PI2",
+                "type": "interest"
+            }
+        ],
+        "graph": {
+            "P1": {
+                "r": 347
+            },
+            "r": {
+                "P1": 347,
+                "l": 136
+            },
+            "l": {
+                "r": 136,
+                "PI2": 840
+            },
+            "PI2": {
+                "l": 840
+            }
+        },
+        "distance": 1323,
+        "estimatedTime": 16,
+        "duration": 16,
+        "risk": 2.5,
+        "created_at": "2025-05-03T09:52:37.976069"
+    },
+    {
+        "name": "R2",
+        "description": "asas",
+        "difficulty": 5,
+        "popularity": 5,
+        "points": [
+            {
+                "lat": 5.066308778636779,
+                "lng": -75.51750898361207,
+                "nodeName": "P1",
+                "type": "interest"
+            },
+            {
+                "lat": 5.066144135596127,
+                "lng": -75.5162698030472,
+                "nodeName": "y",
+                "risk": 1,
+                "type": "control"
+            }
+        ],
+        "graph": {
+            "P1": {
+                "y": 201
+            },
+            "y": {
+                "P1": 201
+            }
+        },
+        "distance": 201,
+        "estimatedTime": 2,
+        "duration": 2,
+        "risk": 1.0,
+        "created_at": "2025-05-03T09:52:38.791801"
+    }
+]
