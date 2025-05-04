@@ -271,10 +271,58 @@ export const showRouteWithColor = (routeLayers, routeName, color, map) => {
   if (routeLayer) {
     routeLayer.setStyle({
       color: color,
-      weight: 6,         // Un poco más grueso que el normal
+      weight: 6,
       opacity: 0.9
     });
     routeLayer.highlighted = true;
+    routeLayer.openPopup();
+    map.fitBounds(routeLayer.getBounds(), {
+      padding: [50, 50],
+      animate: true
+    });
     routeLayer.bringToFront();
+  }
+};
+export const showMultipleRoutes = (routeLayers, routesData, map) => {
+  if (!map) return;
+  
+  // Primero limpiar resaltados anteriores
+  routeLayers.forEach(layer => {
+    if (layer.highlighted) {
+      layer.setStyle({ color: '#0066ff', weight: 5, opacity: 0.8 });
+      layer.highlighted = false;
+      if (layer.isPopupOpen()) layer.closePopup();
+    }
+  });
+
+  // Resaltar cada ruta con su color
+  routesData.forEach(route => {
+    const routeLayer = routeLayers.find(
+      l => l && l.routeData?.name === route.name
+    );
+    
+    if (routeLayer) {
+      routeLayer.setStyle({
+        color: route.color,
+        weight: 6,
+        opacity: 0.9
+      });
+      routeLayer.highlighted = true;
+    }
+  });
+
+  // Ajustar vista para mostrar todas las rutas
+  if (routesData.length > 0) {
+    const bounds = routesData.reduce((acc, route) => {
+      const layer = routeLayers.find(l => l && l.routeData?.name === route.name);
+      return layer ? acc.extend(layer.getBounds()) : acc;
+    }, L.latLngBounds([]));
+    
+    if (!bounds.isValid()) return;
+    
+    map.fitBounds(bounds, {
+      padding: [50, 50],
+      animate: true
+    });
   }
 };

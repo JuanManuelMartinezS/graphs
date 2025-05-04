@@ -69,7 +69,7 @@ const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
   // Métodos expuestos
   useImperativeHandle(ref, () => ({
     setMode: (newMode) => setMode(newMode),
-    
+    getMapInstance: () => mapInstance.current,
     clearRoute: () => {
       setRoutePoints([]);
       markersRef.current.forEach(marker => marker.remove());
@@ -78,18 +78,25 @@ const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
     
     clearHighlightedRoutes: () => {
       routeLayersRef.current.forEach(layer => {
-        if (layer && layer.highlighted) {
-          layer.setStyle({ 
-            color: '#0066ff', // Color normal
-            weight: 5,        // Grosor normal
-            opacity: 0.8
-          });
-          layer.highlighted = false;
-          if (layer.isPopupOpen()) {
-            layer.closePopup();
+        if (layer && mapInstance.current) {
+          if (layer.highlighted) {
+            // Eliminar completamente la capa del mapa
+            mapInstance.current.removeLayer(layer);
+          } else {
+            // Restablecer estilo si no está resaltada
+            layer.setStyle({ 
+              color: '#0066ff',
+              weight: 5,
+              opacity: 0.8
+            });
+            if (layer.isPopupOpen()) {
+              layer.closePopup();
+            }
           }
         }
       });
+      // Filtrar para mantener solo las capas no resaltadas
+      routeLayersRef.current = routeLayersRef.current.filter(layer => !layer?.highlighted);
     },
     
     showRouteWithColor: (routeName, color) => {

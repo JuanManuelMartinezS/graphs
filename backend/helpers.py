@@ -118,7 +118,7 @@ class Helpers:
     #                     })
 
     #     return rutas_aproximadas
-    def generar_rutas_optimas(nodos, duracion_objetivo, dificultad, experiencia, alpha=1, beta=1, tolerancia=2):
+    def generar_rutas_optimas(nodos, duracion_objetivo, velocidad_kmh, dificultad, experiencia, alpha=1, beta=1, tolerancia=6):
         """Genera rutas óptimas usando Floyd-Warshall con la fórmula de peso especificada"""
         try:
             # Validación básica
@@ -141,7 +141,7 @@ class Helpers:
                     n1, n2 = nodos[i], nodos[j]
                     try:
                         distancia_km = Helpers.haversine(n1['lng'], n1['lat'], n2['lng'], n2['lat'])
-                        g.add_edge(n1['name'], n2['name'], distancia_km * 1000)  # Convertir a metros
+                        g.add_edge(n1['name'], n2['name'], distancia_km * 1000, True)  # Convertir a metros
                     except KeyError as e:
                         print(f"Error en nodos {n1.get('name')} y {n2.get('name')}: {e}")
                         continue
@@ -150,7 +150,6 @@ class Helpers:
             distancias, next_node = g.floyd_warshall_with_paths()
             
             # Parámetros para cálculo de peso
-            velocidad_kmh = 10  # Velocidad promedio en km/h
             peso_objetivo = alpha * (duracion_objetivo/60) + beta * (dificultad/experiencia)
             
             rutas_posibles = []

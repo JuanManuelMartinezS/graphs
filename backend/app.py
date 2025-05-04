@@ -405,10 +405,11 @@ def generar_rutas_personalizadas():
         
         nodos = data.get("nodos", [])
         duracion_objetivo = float(data.get("duracion_objetivo", 60))  # en minutos
+        velocidad = float(data.get("velocidad", 15))  # en km/h
         dificultad = int(data.get("dificultad", 1))
         experiencia = int(data.get("experiencia", 1))
         
-        rutas = Helpers.generar_rutas_optimas(nodos, duracion_objetivo, dificultad, experiencia)
+        rutas = Helpers.generar_rutas_optimas(nodos, duracion_objetivo, velocidad, dificultad, experiencia)
         
         return jsonify({
             "status": "success",

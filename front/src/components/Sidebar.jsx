@@ -17,7 +17,7 @@ function Sidebar({
   const [showModalPersonalizada, setShowModalPersonalizada] = useState(false);
   const [showModalPersonalizada2, setShowModalPersonalizada2] = useState(false);
   const [showClearButton, setShowClearButton] = useState(false);
-
+  const [showClearRoutesButton, setShowClearRoutesButton] = useState(false);
 
   const handleMinimumDistances = async () => {
     try {
@@ -104,32 +104,34 @@ function Sidebar({
 
   const handleSubmitRutaPersonalizada2 = async (rutasConColores) => {
     try {
-      if (!rutasConColores || rutasConColores.length === 0) {
-        // Limpiar las rutas si no hay resultados
-        if (mapViewRef.current) {
-          mapViewRef.current.clearHighlightedRoutes();
-        }
+      if (!mapViewRef.current) return;
+      
+      // Limpiar rutas anteriores
+      mapViewRef.current.clearHighlightedRoutes();
+      
+      if (!rutasConColores || rutasConColores.length === 0){
+        setShowClearRoutesButton(false);
         return;
-      }
+      } 
   
-      // Mostrar todas las rutas con sus colores asignados
-      if (mapViewRef.current) {
-        // Primero limpiar cualquier ruta resaltada anteriormente
-        mapViewRef.current.clearHighlightedRoutes();
-        
-        // Dibujar cada ruta con su color correspondiente
-        rutasConColores.forEach(ruta => {
-          mapViewRef.current.showRouteWithColor(ruta.name, ruta.color);
-        });
+      // Mostrar todas las rutas con sus colores
+      rutasConColores.forEach(ruta => {
+        mapViewRef.current.showRouteWithColor(ruta.name, ruta.color);
+      });
   
-        // Opcional: Ajustar la vista para mostrar todas las rutas
-        if (rutasConColores.length > 0) {
-          const firstRoute = rutasConColores[0];
-          mapViewRef.current.showRoutePopup(firstRoute.name);
-        }
+      setShowClearRoutesButton(true);
+      // Opcional: Mostrar popup de la primera ruta
+      if (rutasConColores.length > 0) {
+        mapViewRef.current.showRoutePopup(rutasConColores[0].name);
       }
     } catch (error) {
       console.error("Error al mostrar rutas personalizadas:", error);
+    }
+  };
+  const handleClearCustomRoutes = () => {
+    if (mapViewRef.current) {
+      mapViewRef.current.clearHighlightedRoutes();
+      setShowClearRoutesButton(false);
     }
   };
   const handleRouteSelected = (routeName) => {
@@ -264,12 +266,22 @@ function Sidebar({
     onRouteSelected={handleRouteSelected}
   />
   
-  <ModalRutasPersonalizadas
-    isOpen={showModalPersonalizada2}
-    onClose={() => setShowModalPersonalizada2(false)}
-    onSubmit={handleSubmitRutaPersonalizada2}
-    routes={routes}
-  />
+<ModalRutasPersonalizadas
+  isOpen={showModalPersonalizada2}
+  onClose={() => setShowModalPersonalizada2(false)}
+  onSubmit={handleSubmitRutaPersonalizada2}
+  mapViewRef={mapViewRef}  // <-- Pasa la referencia
+/>
+{showClearRoutesButton && (
+  <div className="mt-4 pt-4 border-t border-gray-600">
+    <button
+      className="w-full bg-red-500 hover:bg-red-600 p-2 rounded transition"
+      onClick={handleClearCustomRoutes}
+    >
+      Limpiar rutas personalizadas
+    </button>
+  </div>
+)}
 </div>
   );
 }
