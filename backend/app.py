@@ -367,22 +367,60 @@ def get_shortest_distances():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-@app.route('/generar_rutas', methods=['POST'])
-def generar_rutas_personalizadas():
+# @app.route('/generar_rutas', methods=['POST'])
+# def generar_rutas_personalizadas():
 
-    try:
-        data = request.get_json()
+#     try:
+#         data = request.get_json()
 
-        nodos = data.get("nodos", [])
-        duracion_objetivo = data.get("duracion_objetivo", 60)  # en minutos
-        dificultad = data.get("dificultad", 1)
-        experiencia = data.get("experiencia", 1)
-        print("Entre a generar_rutas")
+#         nodos = data.get("nodos", [])
+#         duracion_objetivo = data.get("duracion_objetivo", 60)  # en minutos
+#         dificultad = data.get("dificultad", 1)
+#         experiencia = data.get("experiencia", 1)
+#         print("Entre a generar_rutas")
     
+#         rutas = Helpers.generar_rutas_optimas(nodos, duracion_objetivo, dificultad, experiencia)
+#         return jsonify({"status": "success", "rutas": rutas})
+#     except Exception as e:
+#         return jsonify({"status": "error", "message": str(e)}), 500
+@app.route('/generar_rutas', methods=['POST', 'OPTIONS'])
+def generar_rutas_personalizadas():
+    if request.method == 'OPTIONS':
+        return _build_cors_preflight_response()
+    
+    try:
+        print("Datos recibidos:", request.json)
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "Datos no proporcionados"}), 400
+        
+        # Validar parámetros requeridos
+        required_params = ['duracion_objetivo', 'dificultad', 'experiencia']
+        if not all(param in data for param in required_params):
+            return jsonify({
+                "status": "error", 
+                "message": "Faltan parámetros requeridos",
+                "required": required_params
+            }), 400
+        
+        nodos = data.get("nodos", [])
+        duracion_objetivo = float(data.get("duracion_objetivo", 60))  # en minutos
+        dificultad = int(data.get("dificultad", 1))
+        experiencia = int(data.get("experiencia", 1))
+        
         rutas = Helpers.generar_rutas_optimas(nodos, duracion_objetivo, dificultad, experiencia)
-        return jsonify({"status": "success", "rutas": rutas})
+        
+        return jsonify({
+            "status": "success",
+            "rutas": rutas
+        }), 200
+        
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        print(f"Error en generar_rutas: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
         
 def _build_cors_preflight_response():
     response = jsonify({"message": "Preflight OK"})

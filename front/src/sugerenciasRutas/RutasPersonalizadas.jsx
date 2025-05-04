@@ -42,44 +42,55 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit }) => {
     setError(null);
     setRutasSugeridas([]);
     setNoResults(false);
-
+  
     try {
-      const nodes = await loadNodes();
-      setFiltros(prev => ({ ...prev, nodos: nodes }));
-      console.log(filtros);
-      
-      const response = await fetch('http://localhost:5000/generar_rutas', {
+      // 1. Validar datos antes de enviar
+      if (!filtros.duracion || !filtros.dificultad || !filtros.experiencia) {
+        throw new Error("Todos los campos son requeridos");
+      }
+  
+      // 2. Preparar body con estructura exacta que espera el backend
+      const requestBody = {
+        duracion_objetivo: Number(filtros.duracion),
+        dificultad: Number(filtros.dificultad),
+        experiencia: Number(filtros.experiencia),
+        nodos: await loadNodes() // Asegúrate que esto devuelve el array de nodos
+      };
+  
+      console.log("Enviando:", requestBody); // Para debug
+  
+      // 3. Hacer la petición con los headers correctos
+      const response = await fetch(`${API_BASE}/generar_rutas`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        body: JSON.stringify(filtros)
+        body: JSON.stringify(requestBody)
       });
-
-      console.log(response);
-      
-
+      console.log("Respuesta del servidor:", response); // Para debug
+  
+      // 4. Manejar respuesta
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al obtener rutas sugeridas');
+        throw new Error(errorData.message || `Error ${response.status}`);
       }
-
-      const rutas = await response.json();
+  
+      const data = await response.json();
       
-      if (rutas.length === 0) {
+      if (!data.rutas || data.rutas.length === 0) {
         setNoResults(true);
       } else {
-        // Asignar un color a cada ruta
-        const rutasConColores = rutas.map((ruta, index) => ({
+        const rutasConColores = data.rutas.map((ruta, index) => ({
           ...ruta,
           color: ROUTE_COLORS[index % ROUTE_COLORS.length]
         }));
         setRutasSugeridas(rutasConColores);
-        // Enviar todas las rutas con sus colores al componente padre
         onSubmit(rutasConColores);
       }
     } catch (err) {
       setError(err.message);
+      console.error("Error en generación de rutas:", err);
     } finally {
       setIsLoading(false);
     }
