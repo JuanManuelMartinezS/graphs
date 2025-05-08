@@ -1,4 +1,13 @@
+/**
+ * Crea un icono personalizado para un nodo en el mapa basado en su tipo y propiedades.
+ * 
+ * @param {Object} node - Objeto que representa el nodo/marcador en el mapa
+ * @param {string} node.type - Tipo de nodo ('interest' o 'control')
+ * @param {number} node.risk - Nivel de riesgo (1-5) para nodos de control
+ * @returns {L.DivIcon} Objeto de icono Leaflet personalizado
+ */
 export const createNodeIcon = (node) => {
+    // Icono especial para puntos de interés
     if (node.type === 'interest') {
       return L.divIcon({
         className: 'custom-marker',
@@ -10,14 +19,16 @@ export const createNodeIcon = (node) => {
       });
     }
 
+    // Mapeo de colores según nivel de riesgo para puntos de control
     const markerColor = {
-      1: 'green',
-      2: 'blue',
-      3: 'yellow',
-      4: 'orange',
-      5: 'red'
-    }[node.risk] || 'blue';
+      1: 'green',    // Riesgo muy bajo
+      2: 'blue',     // Riesgo bajo
+      3: 'yellow',   // Riesgo medio
+      4: 'orange',   // Riesgo alto
+      5: 'red'       // Riesgo muy alto
+    }[node.risk] || 'blue'; // Valor por defecto si no hay riesgo definido
 
+    // Crear icono para puntos de control con indicador de riesgo
     return L.divIcon({
       className: 'custom-marker',
       html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; display: flex; justify-content: center; align-items: center;">
@@ -28,6 +39,19 @@ export const createNodeIcon = (node) => {
     });
   };
 
+/**
+ * Genera el contenido HTML para el popup de un nodo en el mapa.
+ * 
+ * @param {Object} node - Objeto que representa el nodo/marcador
+ * @param {string} node.name - Nombre del punto
+ * @param {string} node.type - Tipo de nodo ('interest' o 'control')
+ * @param {string} node.description - Descripción del punto
+ * @param {number} node.risk - Nivel de riesgo (1-5)
+ * @param {number} node.lat - Latitud geográfica
+ * @param {number} node.lng - Longitud geográfica
+ * @param {string} node.created_at - Fecha de creación en formato ISO
+ * @returns {string} HTML estructurado para el popup
+ */
 export const createNodePopupContent = (node) => {
     return `
 <div style="min-width: 240px; font-family: 'Segoe UI', Arial, sans-serif; 
@@ -76,7 +100,7 @@ export const createNodePopupContent = (node) => {
         </div>
     </div>
 
-    <!-- Pie con fecha y botón -->
+    <!-- Pie con fecha y botón de eliminación -->
     <div style="border-top: 1px solid #e5e7eb; padding-top: 12px; display: flex; 
                 justify-content: space-between; align-items: center;">
         <small style="color: #9ca3af;">Creado: ${new Date(node.created_at).toLocaleDateString()}</small>

@@ -199,7 +199,7 @@ console.log("rutasConColores",rutasConColores)
       if (!mapInstance) return;
   
       const newRouteLayers = [];
-      for (const ruta of rutasSugeridas) {
+      for (const ruta of rutasSugeridas) {c
         try {
           if (!ruta.points || ruta.points.length < 2) continue;
   

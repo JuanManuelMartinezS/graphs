@@ -1,8 +1,10 @@
 const API_BASE = 'http://localhost:5000';
-
-// Global event for simulation updates
 const OPENROUTE_API_KEY = '5b3ce3597851110001cf6248c910617856ea49d4b76517022e36589d';
 
+/**
+ * Eventos de simulación disponibles
+ * @constant {Object}
+ */
 export const SIMULATION_EVENTS = {
   START: 'simulation:start',
   PROGRESS: 'simulation:progress',
@@ -12,7 +14,7 @@ export const SIMULATION_EVENTS = {
   STOP: 'simulation:stop'
 };
 
-// State for the current simulation
+// Estado interno de la simulación
 let simulationState = {
   isActive: false,
   isPaused: false,
@@ -30,17 +32,24 @@ let simulationState = {
   currentSegmentDistance: 0
 };
 
+/**
+ * Inicia una simulación de ruta
+ * @param {string} routeName - Nombre de la ruta
+ * @param {number} [speed=15] - Velocidad en km/h
+ * @returns {Promise<Object>} Resultado de la operación
+ */
 export const startSimulation = async (routeName, speed = 15) => {
   try {
-    // Get route details
+    // Obtener detalles de la ruta
     const routeDetails = await fetchRouteDetails(routeName);
     
-    // Get the full route geometry from OpenRouteService
+    // Obtener geometría de la ruta desde OpenRouteService
     const routeGeometry = await fetchRouteGeometry(routeDetails);
     
-    // Set initial simulation state
+    // Reiniciar estado
     resetSimulationState();
     
+    // Configurar nuevo estado
     simulationState.routeName = routeName;
     simulationState.routePoints = routeDetails.points;
     simulationState.routeGeometry = routeGeometry;
@@ -48,25 +57,24 @@ export const startSimulation = async (routeName, speed = 15) => {
     simulationState.averageSpeed = speed;
     simulationState.startTime = Date.now();
     
-    // Set initial position
+    // Establecer posición inicial
     const startPoint = routeGeometry.coordinates[0];
     simulationState.currentPosition = {
       lat: startPoint[1],
       lng: startPoint[0]
     };
     
-    // Dispatch start event with initial position
-    const startEvent = new CustomEvent(SIMULATION_EVENTS.START, {
+    // Disparar evento de inicio
+    window.dispatchEvent(new CustomEvent(SIMULATION_EVENTS.START, {
       detail: {
         routeName,
         totalDistance: routeDetails.distance,
         averageSpeed: speed,
         initialPosition: simulationState.currentPosition
       }
-    });
-    window.dispatchEvent(startEvent);
+    }));
     
-    // Start the simulation
+    // Iniciar simulación
     initializeSimulation();
     
     return {
@@ -82,6 +90,12 @@ export const startSimulation = async (routeName, speed = 15) => {
   }
 };
 
+/**
+ * Obtiene detalles de una ruta desde el backend
+ * @param {string} routeName - Nombre de la ruta
+ * @returns {Promise<Object>} Detalles de la ruta
+ * @throws {Error} Si falla la petición o no encuentra la ruta
+ */
 const fetchRouteDetails = async (routeName) => {
   try {
     const response = await fetch(`${API_BASE}/routes`);
@@ -100,6 +114,11 @@ const fetchRouteDetails = async (routeName) => {
   }
 };
 
+/**
+ * Obtiene la geometría de la ruta desde OpenRouteService
+ * @param {Object} routeDetails - Detalles de la ruta
+ * @returns {Promise<Object>} Geometría de la ruta en formato GeoJSON
+ */
 const fetchRouteGeometry = async (routeDetails) => {
   try {
     const coordinates = routeDetails.points.map(point => [point.lng, point.lat]);
@@ -131,6 +150,9 @@ const fetchRouteGeometry = async (routeDetails) => {
   }
 };
 
+/**
+ * Inicializa el loop de simulación
+ */
 const initializeSimulation = () => {
   if (!simulationState.routeGeometry || !simulationState.startTime) {
     return;
@@ -140,32 +162,38 @@ const initializeSimulation = () => {
   startSimulationLoop();
 };
 
+/**
+ * Inicia el loop de actualización de posición
+ */
 const startSimulationLoop = () => {
   if (simulationState.intervalId) {
     clearInterval(simulationState.intervalId);
   }
   
-  const updateInterval = 200; // Update every 200ms
+  // Intervalo de actualización (200ms)
   simulationState.intervalId = setInterval(() => {
     if (!simulationState.isActive || simulationState.isPaused) return;
     updatePosition();
-  }, updateInterval);
+  }, 200);
 };
 
+/**
+ * Actualiza la posición en la simulación
+ */
 const updatePosition = () => {
   if (!simulationState.isActive || simulationState.isPaused) return;
   
   const now = Date.now();
-  const elapsedTime = (now - simulationState.startTime) / 1000; // in seconds
-  const distanceToCover = (simulationState.averageSpeed * 1000 / 3600) * elapsedTime; // in meters
+  const elapsedTime = (now - simulationState.startTime) / 1000; // segundos
+  const distanceToCover = (simulationState.averageSpeed * 1000 / 3600) * elapsedTime; // metros
   
-  // Check if we've reached the end
+  // Verificar si se completó la ruta
   if (distanceToCover >= simulationState.totalDistance) {
     endSimulation();
     return;
   }
   
-  // Find the current segment based on distance covered
+  // Encontrar segmento actual basado en distancia recorrida
   let currentDistance = 0;
   let currentSegmentIndex = 0;
   
@@ -185,7 +213,7 @@ const updatePosition = () => {
     currentDistance += segmentDistance;
   }
   
-  // Calculate position within the current segment
+  // Calcular posición dentro del segmento actual
   const segmentStart = simulationState.routeGeometry.coordinates[currentSegmentIndex];
   const segmentEnd = simulationState.routeGeometry.coordinates[currentSegmentIndex + 1];
   const segmentDistance = calculateDistance(
@@ -196,15 +224,17 @@ const updatePosition = () => {
   const remainingDistance = distanceToCover - currentDistance;
   const ratio = remainingDistance / segmentDistance;
   
+  // Calcular nueva posición
   const newLat = segmentStart[1] + (segmentEnd[1] - segmentStart[1]) * ratio;
   const newLng = segmentStart[0] + (segmentEnd[0] - segmentStart[0]) * ratio;
   
+  // Actualizar estado
   simulationState.currentPosition = { lat: newLat, lng: newLng };
   simulationState.currentSegmentIndex = currentSegmentIndex;
   simulationState.distanceTraveled = distanceToCover;
   simulationState.elapsedTime = elapsedTime;
   
-  // Dispatch progress event with updated position
+  // Disparar evento de progreso
   window.dispatchEvent(new CustomEvent(SIMULATION_EVENTS.PROGRESS, {
     detail: {
       currentPosition: simulationState.currentPosition,
@@ -216,8 +246,16 @@ const updatePosition = () => {
   }));
 };
 
+/**
+ * Calcula distancia entre dos puntos geográficos (Fórmula Haversine)
+ * @param {number} lat1 - Latitud punto 1
+ * @param {number} lon1 - Longitud punto 1
+ * @param {number} lat2 - Latitud punto 2
+ * @param {number} lon2 - Longitud punto 2
+ * @returns {number} Distancia en metros
+ */
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371e3; // Earth radius in meters
+  const R = 6371e3; // Radio de la Tierra en metros
   const φ1 = lat1 * Math.PI / 180;
   const φ2 = lat2 * Math.PI / 180;
   const Δφ = (lat2 - lat1) * Math.PI / 180;
@@ -228,9 +266,12 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
           Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-  return R * c; // Distance in meters
+  return R * c;
 };
 
+/**
+ * Finaliza la simulación
+ */
 const endSimulation = () => {
   if (simulationState.intervalId) {
     clearInterval(simulationState.intervalId);
@@ -248,6 +289,9 @@ const endSimulation = () => {
   }));
 };
 
+/**
+ * Reinicia el estado de simulación
+ */
 const resetSimulationState = () => {
   if (simulationState.intervalId) {
     clearInterval(simulationState.intervalId);
@@ -271,6 +315,9 @@ const resetSimulationState = () => {
   };
 };
 
+/**
+ * Pausa la simulación actual
+ */
 export const pauseSimulation = () => {
   if (!simulationState.isActive || simulationState.isPaused) return;
   
@@ -281,6 +328,9 @@ export const pauseSimulation = () => {
   }));
 };
 
+/**
+ * Reanuda la simulación pausada
+ */
 export const resumeSimulation = () => {
   if (!simulationState.isActive || !simulationState.isPaused) return;
   
@@ -291,6 +341,9 @@ export const resumeSimulation = () => {
   }));
 };
 
+/**
+ * Detiene la simulación actual
+ */
 export const stopSimulation = () => {
   if (!simulationState.isActive) return;
   
