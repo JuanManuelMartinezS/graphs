@@ -1,18 +1,21 @@
+/**
+ * Componente Sidebar - Barra lateral que proporciona funcionalidades para:
+ * - Selección y gestión de rutas
+ * - Creación de puntos y rutas
+ * - Visualización de rutas personalizadas
+ * - Cálculo de distancias mínimas
+ * 
+ * @component
+ * @param {Object} props - Propiedades del componente
+ * @param {Object} props.mapViewRef - Referencia al componente MapView
+ * @param {Function} props.onAddPoint - Manejador para añadir puntos
+ * @param {Function} props.onCreateRoute - Manejador para crear rutas
+ * @param {Array} props.routes - Lista de rutas disponibles
+ * @param {Function} props.onRouteSelected - Manejador para selección de rutas
+ */
 import React, { useState } from 'react';
 import RutaPersonalizada from '../sugerenciasRutas/RutaPersonalizada';
 import ModalRutasPersonalizadas from '../sugerenciasRutas/RutasPersonalizadas';
-
-/**
- * Componente Sidebar - Barra lateral con controles para la interacción con el mapa
- * 
- * @param {Object} props - Propiedades del componente
- * @param {React.RefObject} props.mapViewRef - Referencia al componente del mapa
- * @param {Function} props.onAddPoint - Función para añadir nuevos puntos al mapa
- * @param {Function} props.onCreateRoute - Función para crear nuevas rutas
- * @param {Array} props.routes - Lista de rutas disponibles
- * @param {Function} props.onRouteSelected - Función para manejar la selección de rutas
- * @returns {JSX.Element} Componente de barra lateral
- */
 function Sidebar({ 
   mapViewRef, 
   onAddPoint, 
@@ -30,7 +33,17 @@ function Sidebar({
   const [showClearRoutesButton, setShowClearRoutesButton] = useState(false);
 
   /**
+<<<<<<< HEAD
    * Maneja la selección de distancias mínimas mostrando un modal para seleccionar punto de interés
+=======
+   * Maneja el cálculo de distancias mínimas desde un punto de interés
+   * @async
+   * @description
+   * - Obtiene nodos de interés desde el backend
+   * - Muestra modal personalizado para selección
+   * - Calcula y muestra distancias mínimas al seleccionar
+   * - Habilita botón de limpieza
+>>>>>>> be3b3059f34caeed6116eaf1ffac425e8e5f40ba
    */
   const handleMinimumDistances = async () => {
     try {
@@ -141,6 +154,12 @@ function Sidebar({
 
   /**
    * Limpia las distancias mostradas en el mapa
+<<<<<<< HEAD
+=======
+   * @description
+   * - Llama al método clearDistanceRoutes del MapView
+   * - Oculta el botón de limpieza
+>>>>>>> be3b3059f34caeed6116eaf1ffac425e8e5f40ba
    */
   const handleClearDistances = () => {
     if (mapViewRef.current) {
@@ -150,8 +169,19 @@ function Sidebar({
   };
 
   /**
+<<<<<<< HEAD
    * Maneja el envío de rutas personalizadas con colores específicos
    * @param {Array} rutasConColores - Array de rutas con sus colores asignados
+=======
+   * Maneja el envío de rutas personalizadas con colores
+   * @async
+   * @param {Array} rutasConColores - Rutas con sus colores asignados
+   * @description
+   * - Limpia rutas resaltadas anteriores
+   * - Muestra cada ruta con su color correspondiente
+   * - Habilita botón de limpieza
+   * - Muestra popup de la primera ruta
+>>>>>>> be3b3059f34caeed6116eaf1ffac425e8e5f40ba
    */
   const handleSubmitRutaPersonalizada2 = async (rutasConColores) => {
     try {
@@ -182,7 +212,14 @@ function Sidebar({
   };
 
   /**
+<<<<<<< HEAD
    * Limpia las rutas personalizadas del mapa
+=======
+   * Limpia las rutas personalizadas resaltadas
+   * @description
+   * - Llama al método clearHighlightedRoutes del MapView
+   * - Oculta el botón de limpieza
+>>>>>>> be3b3059f34caeed6116eaf1ffac425e8e5f40ba
    */
   const handleClearCustomRoutes = () => {
     if (mapViewRef.current) {
@@ -194,6 +231,13 @@ function Sidebar({
   /**
    * Maneja la selección de una ruta
    * @param {string} routeName - Nombre de la ruta seleccionada
+<<<<<<< HEAD
+=======
+   * @description
+   * - Busca la ruta en la lista de rutas disponibles
+   * - Actualiza el estado de ruta seleccionada
+   * - Llama al callback onRouteSelected
+>>>>>>> be3b3059f34caeed6116eaf1ffac425e8e5f40ba
    */
   const handleRouteSelected = (routeName) => {
     const route = routes.find(r => r.name === routeName);
@@ -204,8 +248,17 @@ function Sidebar({
   };
 
   /**
+<<<<<<< HEAD
    * Maneja la selección de nivel de experiencia para recomendación de rutas
    * @param {number} nivel - Nivel de experiencia (1-5)
+=======
+   * Maneja la selección de nivel de experiencia
+   * @param {number} nivel - Nivel de experiencia seleccionado (1-5)
+   * @description
+   * - Calcula la diferencia de dificultad con las rutas disponibles
+   * - Selecciona la ruta con menor diferencia
+   * - Llama a handleRouteSelected con la ruta recomendada
+>>>>>>> be3b3059f34caeed6116eaf1ffac425e8e5f40ba
    */
   const handleExperienciaSelect = (nivel) => {
     setSelectedExperiencia(nivel);
@@ -228,7 +281,16 @@ function Sidebar({
   };
 
   /**
+<<<<<<< HEAD
    * Selecciona la ruta con menor nivel de riesgo
+=======
+   * Selecciona la ruta menos peligrosa
+   * @description
+   * - Ordena rutas por nivel de riesgo
+   * - Selecciona la primera ruta (menor riesgo)
+   * - Muestra alerta con información de la ruta
+   * - Llama a handleRouteSelected con la ruta seleccionada
+>>>>>>> be3b3059f34caeed6116eaf1ffac425e8e5f40ba
    */
   const handleRutaMenosPeligrosa = () => {
     if (routes.length === 0) {
@@ -247,7 +309,6 @@ function Sidebar({
       alert("No se pudo determinar la ruta menos peligrosa");
     }
   };
-
   return (
     <div className="w-64 bg-gray-700 text-white p-4 flex flex-col h-full">
       {/* Contenedor principal para los botones superiores */}

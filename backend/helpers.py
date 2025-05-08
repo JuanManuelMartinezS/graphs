@@ -1,4 +1,4 @@
-from datetime import datetime  # Cambia esta línea al inicio del archivo
+from datetime import datetime
 import os
 import json
 from grafo import Graph
@@ -8,10 +8,24 @@ import requests
 
 
 class Helpers:
+    """
+    Clase de utilidades para operaciones comunes en el sistema de gestión de rutas
+    Proporciona métodos para:
+    - Manejo de archivos JSON
+    - Cálculos geográficos
+    - Integración con OpenRouteService
+    - Generación de rutas óptimas
+    """
 
-    # Helper functions
+    @staticmethod
     def load_data(filename):
-        """Cargar datos desde un archivo JSON"""
+        """
+        Carga datos desde un archivo JSON
+        @param filename: Ruta del archivo a cargar
+        @return: Datos cargados como diccionario/lista, o lista vacía si hay error
+        @example:
+            data = Helpers.load_data('data.json')
+        """
         if os.path.exists(filename):
             with open(filename, 'r') as f:
                 try:
@@ -20,17 +34,29 @@ class Helpers:
                     return []
         return []
 
+    @staticmethod
     def save_data(data, filename):
-        """Guardar datos en un archivo JSON"""
+        """
+        Guarda datos en un archivo JSON con formato
+        @param data: Datos a guardar (debe ser serializable a JSON)
+        @param filename: Ruta del archivo destino
+        @example:
+            Helpers.save_data(my_data, 'output.json')
+        """
         with open(filename, 'w') as f:
             json.dump(data, f, indent=4)
 
-        
-
+    @staticmethod
     def haversine(lon1, lat1, lon2, lat2):
         """
-        Calculate the great circle distance between two points 
-        on the earth (specified in decimal degrees)
+        Calcula la distancia entre dos puntos geográficos usando la fórmula de Haversine
+        @param lon1: Longitud punto 1 (grados decimales)
+        @param lat1: Latitud punto 1 (grados decimales)
+        @param lon2: Longitud punto 2 (grados decimales)
+        @param lat2: Latitud punto 2 (grados decimales)
+        @return: Distancia en kilómetros entre los puntos
+        @example:
+            distance = Helpers.haversine(-74.0060, 40.7128, -118.2437, 34.0522)
         """
         # Convertir grados a radianes
         lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
@@ -43,8 +69,18 @@ class Helpers:
         r = 6371  # Radio de la Tierra en kilómetros
         return c * r
 
+    @staticmethod
     def get_ors_distance(coords1, coords2, api_key):
-        """Obtiene la distancia entre dos puntos usando OpenRouteService (devuelve metros)"""
+        """
+        Obtiene la distancia entre dos puntos usando OpenRouteService API
+        @param coords1: Lista/tupla con [longitud, latitud] del punto 1
+        @param coords2: Lista/tupla con [longitud, latitud] del punto 2
+        @param api_key: Clave API para OpenRouteService
+        @return: Distancia en metros (entero) o fallback a Haversine si hay error
+        @raises ValueError: Si la API devuelve un error
+        @example:
+            distance = Helpers.get_ors_distance([-74.0060, 40.7128], [-118.2437, 34.0522], 'my-api-key')
+        """
         url = "https://api.openrouteservice.org/v2/directions/foot-walking"
         headers = {
             'Authorization': api_key,
@@ -64,62 +100,38 @@ class Helpers:
             
             data = response.json()
             distance = data['features'][0]['properties']['segments'][0]['distance']  # en metros
-            return int(round(distance))  # Redondear a 3 decimales
+            return int(round(distance))
         except Exception as e:
             print(f"Error al obtener distancia de ORS: {str(e)}")
             # Fallback a Haversine (convertir a metros y redondear)
             haversine_distance = Helpers.haversine(coords1[0], coords1[1], coords2[0], coords2[1])  # en km
             return int(round(haversine_distance * 1000))  # Convertir a metros y redondear
         
-    # def generar_rutas_optimas(nodos, duracion_objetivo, dificultad, experiencia, alpha=1, beta=1, tolerancia=5):
-       
-    #     if not nodos or len(nodos) < 2:
-    #         return []
-    #     g = Graph()
-    #     # Crear nodos y añadirlos al grafo
-    #     for nodo in nodos:
-    #         g.add_node(nodo["name"])
-        
-    #     # Crear grafo completo con pesos como distancia
-    #     for i in range(len(nodos)):
-    #         for j in range(i + 1, len(nodos)):
-    #             n1, n2 = nodos[i], nodos[j]
-    #             distancia = Helpers.haversine(n1["lat"], n1["lng"], n2["lat"], n2["lng"])
-    #             g.add_edge(n1["name"], n2["name"], weight=distancia, directed=False)
-
-    #     # Calcular duración esperada a partir de distancia (velocidad 20 km/h)
-    #     velocidad = 20  # km/h
-    #     duracion_en_horas = duracion_objetivo / 60
-
-    #     # Calcular peso objetivo
-    #     peso_objetivo = alpha * duracion_en_horas + beta * dificultad / experiencia
-
-    #     # Obtener distancias y caminos
-    #     distancias, next_node = g.floyd_warshall_with_paths()
-
-    #     rutas_aproximadas = []
-    #     for origen in g.graph:
-    #         for destino in g.graph:
-    #             if origen != destino:
-    #                 distancia = distancias[origen][destino]
-    #                 if distancia == float('inf'):
-    #                     continue
-    #                 duracion = distancia / velocidad
-    #                 peso = alpha * duracion + beta * dificultad / experiencia
-    #                 if abs(peso - peso_objetivo) <= (tolerancia / 60):  # tolerancia en minutos
-    #                     ruta = reconstruct_path(origen, destino, next_node)
-    #                     rutas_aproximadas.append({
-    #                         "origen": origen,
-    #                         "destino": destino,
-    #                         "ruta": ruta,
-    #                         "peso": round(peso, 2),
-    #                         "duracion": round(duracion * 60, 2),  # en minutos
-    #                         "distancia": round(distancia, 2)
-    #                     })
-
-    #     return rutas_aproximadas
+    @staticmethod
     def generar_rutas_optimas(nodos, duracion_objetivo, velocidad_kmh, dificultad, experiencia, alpha=1, beta=1, tolerancia=6):
-        """Genera rutas óptimas usando Floyd-Warshall con la fórmula de peso especificada"""
+        """
+        Genera rutas óptimas usando el algoritmo Floyd-Warshall con ponderación personalizada
+        
+        @param nodos: Lista de nodos/diccionarios con propiedades (name, lat, lng, type, risk)
+        @param duracion_objetivo: Duración deseada en minutos
+        @param velocidad_kmh: Velocidad promedio de caminata en km/h
+        @param dificultad: Nivel de dificultad (1-5)
+        @param experiencia: Nivel de experiencia del usuario (1-5)
+        @param alpha: Peso para la duración en el cálculo (default 1)
+        @param beta: Peso para la dificultad en el cálculo (default 1)
+        @param tolerancia: Margen aceptable en minutos respecto al objetivo (default 6)
+        
+        @return: Lista de hasta 10 rutas ordenadas por mejor ajuste al objetivo
+        
+        @example:
+            rutas = Helpers.generar_rutas_optimas(
+                nodos=nodos_data,
+                duracion_objetivo=60,
+                velocidad_kmh=5,
+                dificultad=3,
+                experiencia=2
+            )
+        """
         try:
             # Validación básica
             if not nodos or len(nodos) < 2:
@@ -128,7 +140,6 @@ class Helpers:
 
             g = Graph()
           
-
             # Crear nodos y conexiones
             for nodo in nodos:
                 if not nodo.get('name'):
@@ -214,7 +225,7 @@ class Helpers:
 
             # Ordenar por mejor ajuste al peso objetivo
             rutas_posibles.sort(key=lambda x: x['_score'])
-            print(rutas_posibles)
+            
             # Limitar y formatear resultado final
             return [{
                 'name': r['name'],
