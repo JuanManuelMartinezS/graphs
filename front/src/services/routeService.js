@@ -1,10 +1,20 @@
-const API_BASE = 'http://localhost:5000';
+const API_BASE = 'http://localhost:5000'; // URL base de la API backend
 
 /**
  * Servicio para manejar operaciones relacionadas con rutas y nodos
+ * @namespace routeService
  */
 
-// Cargar rutas desde el servidor
+/**
+ * Carga todas las rutas desde el servidor
+ * @async
+ * @function loadRoutes
+ * @returns {Promise<Array>} Lista de rutas
+ * @throws {Error} Cuando falla la carga de rutas
+ * @example
+ * const routes = await loadRoutes();
+ * console.log(`Se cargaron ${routes.length} rutas`);
+ */
 export const loadRoutes = async () => {
   try {
     const response = await fetch(`${API_BASE}/routes`);
@@ -16,7 +26,16 @@ export const loadRoutes = async () => {
   }
 };
 
-// Cargar nodos desde el servidor
+/**
+ * Carga todos los nodos desde el servidor
+ * @async
+ * @function loadNodes
+ * @returns {Promise<Array>} Lista de nodos
+ * @throws {Error} Cuando falla la carga de nodos
+ * @example
+ * const nodes = await loadNodes();
+ * console.log(`Se cargaron ${nodes.length} nodos`);
+ */
 export const loadNodes = async () => {
   try {
     const response = await fetch(`${API_BASE}/nodes`);
@@ -28,7 +47,17 @@ export const loadNodes = async () => {
   }
 };
 
-// Cargar tanto rutas como nodos
+/**
+ * Carga simultáneamente rutas y nodos desde el servidor
+ * @async
+ * @function loadRoutesAndNodes
+ * @returns {Promise<Object>} Objeto con rutas y nodos
+ * @property {Array} routes - Lista de rutas
+ * @property {Array} nodes - Lista de nodos
+ * @throws {Error} Cuando falla la carga de datos
+ * @example
+ * const { routes, nodes } = await loadRoutesAndNodes();
+ */
 export const loadRoutesAndNodes = async () => {
   try {
     const [routes, nodes] = await Promise.all([
@@ -42,7 +71,20 @@ export const loadRoutesAndNodes = async () => {
   }
 };
 
-// Cargar datos desde un archivo JSON unificado
+/**
+ * Carga datos desde un archivo JSON con soporte para múltiples formatos
+ * @async
+ * @function loadDataFromFile
+ * @param {File} file - Archivo JSON a cargar
+ * @returns {Promise<Object>} Datos estructurados
+ * @property {Array} routes - Rutas cargadas
+ * @property {Array} nodes - Nodos cargados
+ * @throws {Error} Cuando:
+ * - El archivo no tiene formato válido
+ * - Fallan las operaciones de lectura
+ * @example
+ * const data = await loadDataFromFile(fileInput.files[0]);
+ */
 export const loadDataFromFile = async (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -51,45 +93,35 @@ export const loadDataFromFile = async (file) => {
       try {
         const data = JSON.parse(event.target.result);
 
-        // Si es un objeto con routes y nodes directamente
+        // Formato preferido: objeto con routes y nodes
         if (data && typeof data === 'object' && data.routes && data.nodes) {
           resolve(data);
         }
-        // Comprobar si el formato es de una exportación antigua (sin estructura anidada)
+        // Compatibilidad con formatos antiguos
         else {
-          // Intenta dar formato a los datos si no tienen la estructura esperada
-          console.log("Intentando interpretar formato de datos alternativo...");
+          console.log("Interpretando formato alternativo...");
+          let formattedData = { routes: [], nodes: [] };
 
-          let formattedData = {
-            routes: [],
-            nodes: []
-          };
-
-          // Comprueba diferentes posibilidades de estructura
+          // Si es array, determinar si son rutas o nodos
           if (Array.isArray(data)) {
-            // Si es un array, podría ser solo nodos o solo rutas
-            // Intentamos identificar por las propiedades características
             if (data.length > 0) {
               if (data[0].hasOwnProperty('points')) {
-                // Parece ser un array de rutas
                 formattedData.routes = data;
               } else if (data[0].hasOwnProperty('lat') && data[0].hasOwnProperty('lng')) {
-                // Parece ser un array de nodos
                 formattedData.nodes = data;
               }
             }
           }
 
-          // Si alguno de los arrays sigue vacío, podríamos tener un formato diferente
           if (formattedData.routes.length === 0 || formattedData.nodes.length === 0) {
-            throw new Error("El archivo no tiene el formato esperado.");
+            throw new Error("Formato de archivo no reconocido");
           }
 
           resolve(formattedData);
         }
       } catch (error) {
         console.error("Error al procesar archivo:", error);
-        reject(new Error(`Error al procesar el archivo: ${error.message}`));
+        reject(new Error(`Error al procesar archivo: ${error.message}`));
       }
     };
 
@@ -101,7 +133,21 @@ export const loadDataFromFile = async (file) => {
   });
 };
 
-// Guardar una ruta en el servidor
+/**
+ * Guarda una ruta en el servidor
+ * @async
+ * @function saveRoute
+ * @param {Object} routeData - Datos de la ruta a guardar
+ * @param {string} routeData.name - Nombre único de la ruta
+ * @param {Array} routeData.points - Puntos que conforman la ruta
+ * @returns {Promise<Object>} Ruta guardada
+ * @throws {Error} Cuando falla el guardado
+ * @example
+ * await saveRoute({
+ *   name: "Ruta1",
+ *   points: [{lat: 40.7128, lng: -74.0060}]
+ * });
+ */
 export const saveRoute = async (routeData) => {
   try {
     const response = await fetch(`${API_BASE}/routes`, {
@@ -124,16 +170,27 @@ export const saveRoute = async (routeData) => {
   }
 };
 
-// Guardar múltiples rutas a la vez
+/**
+ * Guarda múltiples rutas en el servidor, omitiendo duplicados
+ * @async
+ * @function saveRoutes
+ * @param {Array} routes - Lista de rutas a guardar
+ * @returns {Promise<Object>} Resultado de la operación
+ * @property {boolean} success - Indica éxito general
+ * @property {number} saved - Rutas guardadas exitosamente
+ * @property {number} total - Total de rutas recibidas
+ * @throws {Error} Cuando falla la carga inicial de rutas existentes
+ * @example
+ * const result = await saveRoutes(routesList);
+ * console.log(`Guardadas ${result.saved}/${result.total} rutas`);
+ */
 export const saveRoutes = async (routes) => {
   try {
     console.log("Guardando rutas:", routes.length);
-
-    // Primero cargamos las rutas existentes
+    
     const existingRoutes = await loadRoutes();
     const existingRouteNames = new Set(existingRoutes.map(r => r.name));
 
-    // Guardamos cada ruta individualmente usando la API existente
     const results = [];
     for (const route of routes) {
       try {
@@ -145,20 +202,27 @@ export const saveRoutes = async (routes) => {
         results.push(result);
       } catch (error) {
         console.error(`Error al guardar ruta ${route.name}:`, error);
-        // Continuamos con la siguiente ruta
       }
     }
 
-    console.log(`Rutas guardadas correctamente: ${results.length} de ${routes.length}`);
+    console.log(`Rutas guardadas: ${results.length}/${routes.length}`);
     return { success: true, saved: results.length, total: routes.length };
   } catch (error) {
-    console.error("Error global al guardar rutas:", error);
+    console.error("Error al guardar rutas:", error);
     throw error;
   }
 };
 
-
-// Eliminar una ruta
+/**
+ * Elimina una ruta del servidor
+ * @async
+ * @function deleteRoute
+ * @param {string} routeName - Nombre de la ruta a eliminar
+ * @returns {Promise<Object>} Respuesta del servidor
+ * @throws {Error} Cuando falla la eliminación
+ * @example
+ * await deleteRoute("Ruta1");
+ */
 export const deleteRoute = async (routeName) => {
   try {
     const response = await fetch(`${API_BASE}/routes/${routeName}`, {
@@ -177,14 +241,18 @@ export const deleteRoute = async (routeName) => {
   }
 };
 
-
-// Exportar rutas y nodos a un único archivo JSON
+/**
+ * Exporta rutas y nodos a un archivo JSON descargable
+ * @async
+ * @function exportDataToFile
+ * @returns {Promise<boolean>} True si la exportación fue exitosa
+ * @throws {Error} Cuando falla la carga de datos o la generación del archivo
+ * @example
+ * await exportDataToFile(); // Descarga automática del archivo
+ */
 export const exportDataToFile = async () => {
   try {
-    // Cargar rutas y nodos
     const data = await loadRoutesAndNodes();
-
-    // Generar JSON con ambos datos
     const dataStr = JSON.stringify(data, null, 2);
     const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
 
@@ -204,62 +272,18 @@ export const exportDataToFile = async () => {
   }
 };
 
-// Exportar solo las rutas a un archivo JSON
-export const exportRoutesToFile = async () => {
-  try {
-    const routes = await loadRoutes();
-    const routesStr = JSON.stringify(routes, null, 2);
-    const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(routesStr)}`;
-
-    const exportName = `rutas_bici_${new Date().toISOString().slice(0, 10)}.json`;
-
-    const link = document.createElement('a');
-    link.setAttribute('href', dataUri);
-    link.setAttribute('download', exportName);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    return true;
-  } catch (error) {
-    console.error("Error al exportar rutas:", error);
-    throw error;
-  }
-};
-
-// Cargar rutas desde un archivo JSON (compatible con versiones anteriores)
-export const loadRoutesFromFile = async (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = (event) => {
-      try {
-        const data = JSON.parse(event.target.result);
-
-        // Si es un array, asumimos que son solo rutas
-        if (Array.isArray(data)) {
-          resolve(data);
-        }
-        // Si es un objeto con propiedad routes, extraemos las rutas
-        else if (data && data.routes && Array.isArray(data.routes)) {
-          resolve(data.routes);
-        } else {
-          throw new Error("El archivo no contiene rutas válidas");
-        }
-      } catch (error) {
-        console.error("Error al procesar archivo:", error);
-        reject(error);
-      }
-    };
-
-    reader.onerror = () => {
-      reject(new Error("Error al leer el archivo"));
-    };
-
-    reader.readAsText(file);
-  });
-};
-
+/**
+ * Calcula y dibuja una ruta usando OpenRouteService API
+ * @async
+ * @function drawRoute
+ * @param {Array} points - Puntos de la ruta
+ * @param {Object} routeData - Datos adicionales de la ruta
+ * @param {string} OPENROUTE_API_KEY - Clave API de OpenRouteService
+ * @returns {Promise<Object>} Datos de la ruta calculada en formato GeoJSON
+ * @throws {Error} Cuando falla la comunicación con la API
+ * @example
+ * const route = await drawRoute(points, {}, 'api-key');
+ */
 export const drawRoute = async (points, routeData, OPENROUTE_API_KEY) => {
   try {
     const coordinates = points.map(point => [point.lng, point.lat]);

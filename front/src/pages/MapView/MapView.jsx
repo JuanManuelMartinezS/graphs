@@ -1,5 +1,3 @@
-
-
 import 'leaflet/dist/leaflet.css';
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import SimulationController from '../../components/SimulationController';
@@ -30,43 +28,107 @@ import {
     showRouteWithColor
 } from './RouteManager';
 
-const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
-  // Referencias
-  const mapRef = useRef(null);
+/**
+ * Componente principal que renderiza y gestiona el mapa interactivo
+ * @component
+ * @param {Object} props - Propiedades del componente
+ * @param {Function} [props.onRoutesLoaded] - Callback cuando se cargan las rutas
+ * @param {React.Ref} ref - Referencia para acceder a métodos públicos
+ * @returns {React.Element} Componente del mapa
+ * 
+ * @example
+ * // Uso básico
+ * const mapRef = useRef();
+ * <MapView ref={mapRef} onRoutesLoaded={() => console.log('Rutas cargadas')} />
+ */
+const MapView = forwardRef(({ onRoutesLoaded = () => {} }, ref) => {
+  // Referencias del componente
+  const mapRef = useRef(null); // Referencia al contenedor del mapa DOM
+  
+  /**
+   * Referencia a la instancia del mapa Leaflet
+   * @type {React.MutableRefObject<L.Map|null>}
+   * @description
+   * - Se inicializa en el useEffect con initializeMap(mapRef.current)
+   * - Permite acceder y manipular el mapa desde cualquier parte del componente
+   * - Se usa para añadir/remover capas, manejar eventos, etc.
+   * - Es expuesta a componentes padre mediante useImperativeHandle
+   */
   const mapInstance = useRef(null);
-  const simulationManagerRef = useRef(null);
+  
+  const simulationManagerRef = useRef(null); // Referencia al controlador de simulación
+  
+  /**
+   * Referencia a los marcadores (nodos) del mapa
+   * @type {React.MutableRefObject<L.Marker[]>}
+   * @description
+   * Propósito: Almacena un array de todos los marcadores (nodos) mostrados en el mapa.
+   * Características:
+   * - Cada marcador es una instancia de L.Marker de Leaflet
+   * - Se actualiza con loadMapNodes() cuando se cargan los nodos
+   * Permite:
+   * - Limpiar marcadores existentes (markersRef.current.forEach(marker => marker.remove()))
+   * - Acceder a marcadores específicos
+   * - Mantener un registro de todos los marcadores para su gestión
+   */
   const markersRef = useRef([]);
+  
+  /**
+   * Referencia a las capas de ruta del mapa
+   * @type {React.MutableRefObject<L.Layer[]>}
+   * @description
+   * Propósito: Almacena un array de todas las capas de ruta (líneas) mostradas en el mapa.
+   * Características:
+   * - Cada capa es una instancia de L.GeoJSON o similar de Leaflet
+   * - Se actualiza con loadMapRoutes() cuando se cargan las rutas
+   * Permite:
+   * - Manipular rutas específicas (resaltar, cambiar color, etc.)
+   * - Limpiar rutas cuando es necesario
+   * - Mantener un registro de todas las rutas para su gestión
+   */
   const routeLayersRef = useRef([]);
   
   // Estado de elementos de distancia
   const distanceElementsRef = useRef({
-    routes: [],
-    markers: [],
-    legend: null
+    routes: [],    // Rutas de distancia calculadas
+    markers: [],   // Marcadores de distancia
+    legend: null   // Leyenda de distancias
   });
   
   // Estados para UI y datos
-  const [routePoints, setRoutePoints] = useState([]);
-  const [mode, setMode] = useState('view');
-  const [clickedPosition, setClickedPosition] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [pointData, setPointData] = useState({
+  const [routePoints, setRoutePoints] = useState([]);        // Puntos seleccionados para crear ruta
+  const [mode, setMode] = useState('view');                 // Modo actual (view, addPoint, createRoute)
+  const [clickedPosition, setClickedPosition] = useState(null); // Posición clickeada en el mapa
+  const [modalOpen, setModalOpen] = useState(false);        // Estado del modal de punto
+  const [pointData, setPointData] = useState({              // Datos del punto a crear
     name: '',
     description: '',
     type: 'control',
     risk: '1'
   });
-  const [selectedRoute, setSelectedRoute] = useState(null);
-  const [selectedNode, setSelectedNode] = useState(null);
-  const [routes, setRoutes] = useState([]);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [routeToDelete, setRouteToDelete] = useState(null);
+  const [selectedRoute, setSelectedRoute] = useState(null);  // Ruta seleccionada
+  const [selectedNode, setSelectedNode] = useState(null);    // Nodo seleccionado
+  const [routes, setRoutes] = useState([]);                 // Lista de rutas cargadas
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); // Confirmación de eliminación
+  const [routeToDelete, setRouteToDelete] = useState(null);  // Ruta a eliminar
 
-  // Constantes
+  // Constantes de configuración
   const API_BASE = getApiBaseUrl();
   const OPENROUTE_API_KEY = getOpenRouteApiKey();
 
-  // Métodos expuestos
+  /**
+   * Expone métodos públicos al componente padre
+   * @type {Object}
+   * @property {Function} setMode - Cambia el modo de interacción
+   * @property {Function} getMapInstance - Obtiene la instancia del mapa
+   * @property {Function} clearRoute - Limpia la ruta en creación
+   * @property {Function} clearHighlightedRoutes - Limpia rutas resaltadas
+   * @property {Function} showRouteWithColor - Muestra ruta con color específico
+   * @property {Function} highlightRoute - Resalta una ruta específica
+   * @property {Function} showRoutePopup - Muestra popup de ruta
+   * @property {Function} showMinimumDistances - Calcula y muestra distancias mínimas
+   * @property {Function} clearDistanceRoutes - Limpia rutas de distancia
+   */
   useImperativeHandle(ref, () => ({
     setMode: (newMode) => setMode(newMode),
     getMapInstance: () => mapInstance.current,
@@ -80,10 +142,8 @@ const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
       routeLayersRef.current.forEach(layer => {
         if (layer && mapInstance.current) {
           if (layer.highlighted) {
-            // Eliminar completamente la capa del mapa
             mapInstance.current.removeLayer(layer);
           } else {
-            // Restablecer estilo si no está resaltada
             layer.setStyle({ 
               color: '#0066ff',
               weight: 5,
@@ -95,7 +155,6 @@ const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
           }
         }
       });
-      // Filtrar para mantener solo las capas no resaltadas
       routeLayersRef.current = routeLayersRef.current.filter(layer => !layer?.highlighted);
     },
     
@@ -133,15 +192,20 @@ const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
     },
   }));
 
-  // Inicialización del mapa
+  /**
+   * Efecto de inicialización del mapa
+   * @description
+   * - Crea el mapa en el contenedor referenciado por mapRef
+   * - Almacena la instancia del mapa en mapInstance
+   * - Carga nodos y rutas iniciales, actualizando markersRef y routeLayersRef
+   * - Realiza limpieza al desmontar el componente
+   */
   useEffect(() => {
-
     if (mapRef.current && !mapInstance.current) {
       const { map, simulationManager } = initializeMap(mapRef.current);
       mapInstance.current = map;
       simulationManagerRef.current = simulationManager;
 
-      
       loadMapNodes(map, markersRef.current, API_BASE, setSelectedNode);
       loadMapRoutes(map, routeLayersRef.current, API_BASE, OPENROUTE_API_KEY, setRoutes, onRoutesLoaded);
     }
@@ -153,7 +217,14 @@ const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
     };
   }, []);
 
-  // Manejador de clics en el mapa
+  /**
+   * Manejador de clics en el mapa
+   * @param {L.LeafletMouseEvent} e - Evento de click de Leaflet
+   * @description
+   * Según el modo actual:
+   * - 'addPoint': Abre modal para añadir nuevo punto
+   * - 'createRoute': Añade punto a la ruta en creación
+   */
   const handleMapClick = (e) => {
     if (mode === 'addPoint') {
       setClickedPosition(e.latlng);
@@ -170,7 +241,13 @@ const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
     }
   };
 
-  // Configuración de eventos del mapa
+  /**
+   * Configuración de eventos del mapa
+   * @description
+   * - Establece manejadores de eventos según el modo actual
+   * - Configura estimación de tiempo para rutas
+   * - Limpia eventos al desmontar o cambiar modo
+   */
   useEffect(() => {
     if (!mapInstance.current) return;
     
@@ -183,14 +260,21 @@ const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
     };
   }, [mode]);
 
-  // Efectos UI
+  // Efecto para redimensionar el mapa cuando cambian modales
   useEffect(() => {
     if (mapInstance.current) {
       setTimeout(() => mapInstance.current.invalidateSize(), 300);
     }
   }, [modalOpen, deleteConfirmOpen]);
 
-  // Manejo de puntos
+  /**
+   * Maneja la adición de un nuevo punto
+   * @async
+   * @description
+   * - Envía datos del punto al servidor
+   * - Recarga nodos si es exitoso
+   * - Cierra modal y restablece estado
+   */
   const onAddPoint = async () => {
     const success = await handleAddPoint(
       pointData, 
@@ -213,7 +297,14 @@ const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
     }
   };
 
-  // Confirmación de eliminación de ruta
+  /**
+   * Confirma la eliminación de una ruta
+   * @async
+   * @description
+   * - Elimina la ruta del servidor
+   * - Recarga rutas si es exitoso
+   * - Cierra modal de confirmación
+   */
   const confirmDeleteRoute = async () => {
     try {
       if (!routeToDelete) return;
@@ -246,7 +337,10 @@ const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
     }
   };
 
-  // Manejador de simulación de rutas
+  /**
+   * Maneja la simulación de rutas
+   * @param {Object} eventData - Datos de simulación
+   */
   const onSimulateRoute = (eventData) => {
     handleSimulateRoute(
       simulationManagerRef.current, 
@@ -255,7 +349,12 @@ const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
     );
   };
 
-  // Eventos globales
+  /**
+   * Configuración de eventos globales
+   * @description
+   * - Escucha eventos personalizados para eliminar nodos/rutas
+   * - Escucha eventos de simulación
+   */
   useEffect(() => {
     const handleDeleteNodeEvent = (e) => handleDeleteNode(
       e.detail, 
@@ -284,7 +383,8 @@ const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
   }, [selectedNode]);
 
   return (
-        <>
+    <>
+      {/* Barra de estado del modo actual */}
       {mode !== 'view' && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[500] bg-white p-2 rounded shadow-lg">
           Modo actual:
@@ -310,8 +410,10 @@ const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
         </div>
       )}
 
+      {/* Contenedor del mapa */}
       <div ref={mapRef} className="absolute inset-0 z-0" />
 
+      {/* Modal para añadir punto */}
       <PointModal
         isOpen={modalOpen}
         onClose={() => {
@@ -380,6 +482,7 @@ const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
         </div>
       </PointModal>
 
+      {/* Modal de confirmación para eliminar ruta */}
       <Modal
         isOpen={deleteConfirmOpen}
         onClose={() => {
@@ -408,8 +511,9 @@ const MapView = forwardRef(({onRoutesLoaded = () => { } }, ref) => {
         </div>
       </Modal>
 
+      {/* Controlador de simulación */}
       <SimulationController simulationManager={simulationManagerRef.current} />
-      </>
+    </>
   );
 });
 

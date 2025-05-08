@@ -1,12 +1,25 @@
+/**
+ * Componente Sidebar - Barra lateral que proporciona funcionalidades para:
+ * - Selección y gestión de rutas
+ * - Creación de puntos y rutas
+ * - Visualización de rutas personalizadas
+ * - Cálculo de distancias mínimas
+ * 
+ * @component
+ * @param {Object} props - Propiedades del componente
+ * @param {Object} props.mapViewRef - Referencia al componente MapView
+ * @param {Function} props.onAddPoint - Manejador para añadir puntos
+ * @param {Function} props.onCreateRoute - Manejador para crear rutas
+ * @param {Array} props.routes - Lista de rutas disponibles
+ * @param {Function} props.onRouteSelected - Manejador para selección de rutas
+ */
 import React, { useState } from 'react';
 import RutaPersonalizada from '../sugerenciasRutas/RutaPersonalizada';
 import ModalRutasPersonalizadas from '../sugerenciasRutas/RutasPersonalizadas';
-
 function Sidebar({ 
   mapViewRef, 
   onAddPoint, 
   onCreateRoute,
-
   routes, 
   onRouteSelected 
 }) {
@@ -19,6 +32,15 @@ function Sidebar({
   const [showClearButton, setShowClearButton] = useState(false);
   const [showClearRoutesButton, setShowClearRoutesButton] = useState(false);
 
+  /**
+   * Maneja el cálculo de distancias mínimas desde un punto de interés
+   * @async
+   * @description
+   * - Obtiene nodos de interés desde el backend
+   * - Muestra modal personalizado para selección
+   * - Calcula y muestra distancias mínimas al seleccionar
+   * - Habilita botón de limpieza
+   */
   const handleMinimumDistances = async () => {
     try {
       // Obtener nodos de interés
@@ -94,7 +116,12 @@ function Sidebar({
     }
   };
 
-  
+  /**
+   * Limpia las distancias mostradas en el mapa
+   * @description
+   * - Llama al método clearDistanceRoutes del MapView
+   * - Oculta el botón de limpieza
+   */
   const handleClearDistances = () => {
     if (mapViewRef.current) {
       mapViewRef.current.clearDistanceRoutes();
@@ -102,6 +129,16 @@ function Sidebar({
     }
   };
 
+  /**
+   * Maneja el envío de rutas personalizadas con colores
+   * @async
+   * @param {Array} rutasConColores - Rutas con sus colores asignados
+   * @description
+   * - Limpia rutas resaltadas anteriores
+   * - Muestra cada ruta con su color correspondiente
+   * - Habilita botón de limpieza
+   * - Muestra popup de la primera ruta
+   */
   const handleSubmitRutaPersonalizada2 = async (rutasConColores) => {
     try {
       if (!mapViewRef.current) return;
@@ -128,12 +165,28 @@ function Sidebar({
       console.error("Error al mostrar rutas personalizadas:", error);
     }
   };
+
+  /**
+   * Limpia las rutas personalizadas resaltadas
+   * @description
+   * - Llama al método clearHighlightedRoutes del MapView
+   * - Oculta el botón de limpieza
+   */
   const handleClearCustomRoutes = () => {
     if (mapViewRef.current) {
       mapViewRef.current.clearHighlightedRoutes();
       setShowClearRoutesButton(false);
     }
   };
+
+  /**
+   * Maneja la selección de una ruta
+   * @param {string} routeName - Nombre de la ruta seleccionada
+   * @description
+   * - Busca la ruta en la lista de rutas disponibles
+   * - Actualiza el estado de ruta seleccionada
+   * - Llama al callback onRouteSelected
+   */
   const handleRouteSelected = (routeName) => {
     const route = routes.find(r => r.name === routeName);
     if (route) {
@@ -142,6 +195,14 @@ function Sidebar({
     }
   };
 
+  /**
+   * Maneja la selección de nivel de experiencia
+   * @param {number} nivel - Nivel de experiencia seleccionado (1-5)
+   * @description
+   * - Calcula la diferencia de dificultad con las rutas disponibles
+   * - Selecciona la ruta con menor diferencia
+   * - Llama a handleRouteSelected con la ruta recomendada
+   */
   const handleExperienciaSelect = (nivel) => {
     setSelectedExperiencia(nivel);
     setShowExperienciaSelect(false);
@@ -160,6 +221,14 @@ function Sidebar({
     }
   };
 
+  /**
+   * Selecciona la ruta menos peligrosa
+   * @description
+   * - Ordena rutas por nivel de riesgo
+   * - Selecciona la primera ruta (menor riesgo)
+   * - Muestra alerta con información de la ruta
+   * - Llama a handleRouteSelected con la ruta seleccionada
+   */
   const handleRutaMenosPeligrosa = () => {
     if (routes.length === 0) {
       alert("No hay rutas disponibles");
@@ -176,7 +245,6 @@ function Sidebar({
       alert("No se pudo determinar la ruta menos peligrosa");
     }
   };
-
   return (
 <div className="w-64 bg-gray-700 text-white p-4 flex flex-col h-full">
   {/* Contenedor principal para los botones superiores con espacio aumentado */}
