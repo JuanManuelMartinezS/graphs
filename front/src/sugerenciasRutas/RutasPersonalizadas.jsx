@@ -258,7 +258,7 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit, mapViewRef }) => 
 
       // Crear y mostrar cada ruta en el mapa
       const newRouteLayers = [];
-      for (const ruta of rutasSugeridas) {
+      for (const ruta of rutasSugeridas) {c
         try {
           if (!ruta.points || ruta.points.length < 2) continue;
 

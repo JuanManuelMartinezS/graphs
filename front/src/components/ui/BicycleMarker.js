@@ -1,6 +1,14 @@
 import L from 'leaflet';
 
-// Create a custom bicycle icon for the simulation
+/**
+ * Crea un icono personalizado para representar una bicicleta en el mapa.
+ * 
+ * @returns {L.DivIcon} Objeto de icono Leaflet personalizado para bicicletas
+ * 
+ * @example
+ * const bikeIcon = createBicycleIcon();
+ * L.marker([lat, lng], {icon: bikeIcon}).addTo(map);
+ */
 export const createBicycleIcon = () => {
   return L.divIcon({
     className: 'bicycle-marker',
@@ -28,21 +36,52 @@ export const createBicycleIcon = () => {
   });
 };
 
-// Create and manage the bicycle marker on the map
+/**
+ * Crea y gestiona un marcador de bicicleta en el mapa con métodos para actualización y eliminación.
+ * 
+ * @param {L.Map} map - Instancia del mapa Leaflet donde se añadirá el marcador
+ * @param {Object} initialPosition - Posición inicial del marcador
+ * @param {number} initialPosition.lat - Latitud inicial
+ * @param {number} initialPosition.lng - Longitud inicial
+ * @returns {Object} Objeto con el marcador y métodos de control
+ * 
+ * @property {L.Marker} marker - Instancia del marcador Leaflet
+ * @property {Function} updatePosition - Actualiza la posición del marcador
+ * @property {Function} remove - Elimina el marcador del mapa
+ * 
+ * @example
+ * const bikeMarker = createBicycleMarker(map, {lat: 40.7128, lng: -74.0060});
+ * bikeMarker.updatePosition({lat: 40.7138, lng: -74.0070});
+ * bikeMarker.remove();
+ */
 export const createBicycleMarker = (map, initialPosition) => {
+  // Validar parámetros de entrada
+  if (!map || !(map instanceof L.Map)) {
+    throw new Error('Se requiere una instancia válida de mapa Leaflet');
+  }
+
+  if (!initialPosition || typeof initialPosition.lat !== 'number' || typeof initialPosition.lng !== 'number') {
+    throw new Error('Se requiere una posición inicial válida con lat y lng');
+  }
+
   const bicycleIcon = createBicycleIcon();
   
-  // Create marker at the initial position
+  // Crear marcador con configuración específica
   const marker = L.marker([initialPosition.lat, initialPosition.lng], {
     icon: bicycleIcon,
-    zIndexOffset: 1000 // Make sure it's above other markers
+    zIndexOffset: 1000, // Asegura que el marcador esté por encima de otros elementos
+    bubblingMouseEvents: false // Evita que los eventos del marcador se propaguen al mapa
   }).addTo(map);
   
-  // Return an object with methods to update the marker
   return {
     marker,
     
-    // Update marker position
+    /**
+     * Actualiza la posición del marcador de bicicleta.
+     * @param {Object} newPosition - Nueva posición del marcador
+     * @param {number} newPosition.lat - Nueva latitud
+     * @param {number} newPosition.lng - Nueva longitud
+     */
     updatePosition: (newPosition) => {
       if (!newPosition || typeof newPosition.lat !== 'number' || typeof newPosition.lng !== 'number') {
         console.error('Invalid position data:', newPosition);
@@ -51,11 +90,21 @@ export const createBicycleMarker = (map, initialPosition) => {
       marker.setLatLng([newPosition.lat, newPosition.lng]);
     },
     
-    // Remove marker from map
+    /**
+     * Elimina el marcador del mapa y limpia los recursos.
+     */
     remove: () => {
-      if (map.hasLayer(marker)) {
+      if (map && marker && map.hasLayer(marker)) {
         map.removeLayer(marker);
       }
+    },
+    
+    /**
+     * Obtiene la posición actual del marcador.
+     * @returns {L.LatLng} Objeto LatLng con la posición actual
+     */
+    getPosition: () => {
+      return marker.getLatLng();
     }
   };
 };
