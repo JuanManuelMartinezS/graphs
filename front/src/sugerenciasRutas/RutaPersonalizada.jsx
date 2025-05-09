@@ -1,7 +1,25 @@
 import React, { useState } from 'react';
 import Modal from '../components/ui/Modal';
 
+/**
+ * Componente RutaPersonalizada - Modal para encontrar rutas que cumplan con criterios específicos
+ * @component
+ * @param {Object} props - Propiedades del componente
+ * @param {boolean} props.isOpen - Controla si el modal está abierto
+ * @param {Function} props.onClose - Manejador para cerrar el modal
+ * @param {Array} props.routes - Lista de rutas disponibles para sugerir
+ * @param {Function} props.onRouteSelected - Callback cuando se selecciona una ruta
+ */
 function RutaPersonalizada({ isOpen, onClose, routes, onRouteSelected }) {
+  /**
+ * @state {number} distance - Distancia deseada en metros (valor inicial: 1000)
+ * @state {number} difficulty - Nivel máximo de dificultad permitido (1-5, valor inicial: 3)
+ * @state {number} maxRisk - Nivel máximo de riesgo permitido (1-5, valor inicial: 3)
+ * @state {Object|null} suggestedRoute - Ruta sugerida que cumple los criterios
+ * @state {boolean} loading - Indica si está en proceso de búsqueda
+ * @state {string|null} error - Mensaje de error si la búsqueda falla
+ * @state {boolean} selectionSuccess - Indica si la selección fue exitosa
+ */
   const [distance, setDistance] = useState(1000);
   const [difficulty, setDifficulty] = useState(3);
   const [maxRisk, setMaxRisk] = useState(3);
@@ -10,6 +28,14 @@ function RutaPersonalizada({ isOpen, onClose, routes, onRouteSelected }) {
   const [error, setError] = useState(null);
   const [selectionSuccess, setSelectionSuccess] = useState(false);
 
+  /**
+   * Busca la mejor ruta según los criterios seleccionados
+   * @description
+   * - Filtra rutas que cumplan con los criterios de distancia, dificultad y riesgo
+   * - Ordena las rutas por cercanía a la distancia deseada y menor riesgo
+   * - Maneja estados de carga y errores durante el proceso
+   * - Establece la ruta sugerida en el estado
+   */
   const findBestRoute = () => {
     setLoading(true);
     setSuggestedRoute(null);
@@ -18,34 +44,59 @@ function RutaPersonalizada({ isOpen, onClose, routes, onRouteSelected }) {
 
     setTimeout(() => {
       try {
+        // Validación de rutas disponibles
         if (!routes || routes.length === 0) {
           setError("No hay rutas disponibles");
           return;
         }
 
+        // Filtrado de rutas elegibles
         const eligibleRoutes = routes.filter(route => {
+          // Calcula la diferencia absoluta entre la distancia de la ruta y la distancia deseada
           const distanceDiff = Math.abs(route.distance - distance);
+
+          // Retorna true si la ruta cumple con TODOS los siguientes criterios:
           return (
+            // 1. La dificultad de la ruta es menor o igual a la dificultad máxima seleccionada
             route.difficulty <= difficulty &&
+
+            // 2. El riesgo de la ruta es menor o igual al riesgo máximo seleccionado
             route.risk <= maxRisk &&
+
+            // 3. La diferencia de distancia está dentro del margen permitido:
+            //    - Se permite hasta un 50% de la distancia deseada O 1000 metros (lo que sea mayor)
+            //    - Esto evita descartar rutas cercanas en distancia cuando se buscan distancias pequeñas
             distanceDiff <= Math.max(distance * 0.5, 1000)
           );
         });
 
+        // Validación de rutas encontradas
         if (eligibleRoutes.length === 0) {
+          // Si no se encontraron rutas que cumplan los filtros:
+          // 1. Establece un mensaje de error para mostrar al usuario
           setError("No se encontraron rutas que cumplan los criterios");
+
+          // 2. Termina la ejecución de la función ya que no hay rutas para procesar
           return;
         }
 
+        // Ordenamiento y selección de la mejor ruta
         const bestRoute = [...eligibleRoutes].sort((a, b) => {
+          // Calcula la diferencia de distancia para ambas rutas (respecto a la distancia deseada)
           const diffA = Math.abs(a.distance - distance);
           const diffB = Math.abs(b.distance - distance);
-          
+
+          // Criterios de ordenamiento:
           if (diffA === diffB) {
+            // Si ambas rutas tienen la misma diferencia de distancia:
+            // Prioriza la ruta con MENOR riesgo (orden ascendente por riesgo)
             return a.risk - b.risk;
           }
+
+          // Si las diferencias de distancia son distintas:
+          // Prioriza la ruta con MENOR diferencia de distancia (orden ascendente por diferencia)
           return diffA - diffB;
-        })[0];
+        })[0]; // Toma el primer elemento del array ordenado (el mejor según los criterios)
 
         setSuggestedRoute(bestRoute);
       } catch (err) {
@@ -57,11 +108,18 @@ function RutaPersonalizada({ isOpen, onClose, routes, onRouteSelected }) {
     }, 100);
   };
 
+  /**
+   * Maneja la selección de la ruta sugerida
+   * @description
+   * - Llama al callback onRouteSelected con el nombre de la ruta
+   * - Muestra estado de éxito temporalmente
+   * - Cierra el modal después de 800ms
+   */
   const handleSelectRoute = () => {
     if (suggestedRoute) {
       onRouteSelected(suggestedRoute.name);
       setSelectionSuccess(true);
-      
+
       setTimeout(() => {
         setSelectionSuccess(false);
         onClose();
@@ -69,11 +127,21 @@ function RutaPersonalizada({ isOpen, onClose, routes, onRouteSelected }) {
     }
   };
 
+  /**
+   * Renderiza un modal con:
+   * - Controles para seleccionar criterios de búsqueda (distancia, dificultad, riesgo)
+   * - Botón para iniciar la búsqueda
+   * - Visualización de errores si ocurren
+   * - Detalles de la ruta sugerida cuando se encuentra
+   * - Botón para confirmar selección de ruta
+   * 
+   * @returns {JSX.Element} Componente Modal con formulario de búsqueda
+   */
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <div className="p-4 max-w-md mx-auto bg-white rounded-lg">
         <h2 className="text-xl text-gray-800 font-bold mb-4 text-center">Sugerencia de Ruta</h2>
-        
+
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -170,7 +238,7 @@ function RutaPersonalizada({ isOpen, onClose, routes, onRouteSelected }) {
             <div className={`mt-4 p-4 border rounded-md ${selectionSuccess ? 'bg-green-100 border-green-300' : 'bg-white border-gray-200'}`}>
               <h3 className="font-bold text-lg text-gray-800">{suggestedRoute.name}</h3>
               <p className="text-sm text-gray-600 mb-3">{suggestedRoute.description}</p>
-              
+
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <div className="bg-blue-100 p-2 rounded-md">
                   <div className="text-xs text-blue-800">Distancia</div>

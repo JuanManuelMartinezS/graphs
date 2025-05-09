@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Modal from '../components/ui/Modal';
 import { loadNodes } from '../services/nodeService';
 import {
-   getOpenRouteApiKey
+  getOpenRouteApiKey
 } from '../pages/MapView/MapLogic';
 const API_BASE = 'http://localhost:5000';
 const OPENROUTE_API_KEY = getOpenRouteApiKey(); // Asegúrate de que esta función esté definida y retorne la clave correcta
@@ -19,13 +19,20 @@ const ROUTE_COLORS = [
   '#FF6347', // Tomate
   '#20B2AA'  // Verde mar
 ];
+/**
+ * Crea una ruta multi-punto con color en el mapa
+ * @async
+ * @param {Object} mapInstance - Instancia de Leaflet del mapa
+ * @param {Array} points - Puntos de la ruta [{lat, lng}]
+ * @param {string} color - Color hexadecimal para la ruta
+ * @param {string} OPENROUTE_API_KEY - Clave API para OpenRouteService
+ * @returns {Object|null} Capa Leaflet de la ruta creada
+ */
 export const createMultiPointColoredRoute = async (mapInstance, points, color, OPENROUTE_API_KEY) => {
   if (!mapInstance || points.length < 2) return null;
-console.log(points);
 
   try {
-    const coordinates = points.map(point => [point.lng, point.lat]);
-
+    // Obtener ruta de OpenRouteService
     const response = await fetch(
       `https://api.openrouteservice.org/v2/directions/foot-walking/geojson`,
       {
@@ -35,7 +42,7 @@ console.log(points);
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          coordinates: coordinates,
+          coordinates: points.map(point => [point.lng, point.lat]),
           elevation: false,
           instructions: false,
           preference: 'shortest',
@@ -44,10 +51,10 @@ console.log(points);
     );
 
     if (!response.ok) throw new Error('Error al obtener la ruta');
-console.log("response",response);
 
     const routeData = await response.json();
 
+    // Crear capa GeoJSON con el estilo especificado
     return L.geoJSON(routeData, {
       style: {
         color: color,
@@ -58,16 +65,33 @@ console.log("response",response);
 
   } catch (error) {
     console.error('Error al crear ruta:', error);
-    // Fallback: línea que conecta todos los puntos
-    const latLngs = points.map(point => [point.lat, point.lng]);
-    return L.polyline(latLngs, {
+    // Fallback: crear una línea simple si falla la API
+    return L.polyline(points.map(point => [point.lat, point.lng]), {
       color: color,
       weight: 5,
       opacity: 0.8
     }).addTo(mapInstance);
   }
 };
-const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit, mapViewRef  }) => {
+/**
+ * Componente ModalRutasPersonalizadas - Modal para generar y visualizar rutas personalizadas
+ * @component
+ * @param {Object} props - Propiedades del componente
+ * @param {boolean} props.isOpen - Controla si el modal está abierto
+ * @param {Function} props.onClose - Manejador para cerrar el modal
+ * @param {Function} props.onSubmit - Callback para enviar rutas generadas
+ * @param {Object} props.mapViewRef - Referencia al componente MapView para manipular el mapa
+ */
+const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit, mapViewRef }) => {
+  /**
+   * Estado para los filtros de búsqueda de rutas
+   * @state {Object} filtros - Objeto con los criterios de búsqueda
+   * @property {string} filtros.duracion - Duración máxima en minutos
+   * @property {string} filtros.dificultad - Nivel de dificultad (1-5)
+   * @property {string} filtros.experiencia - Nivel de experiencia (1-5)
+   * @property {number} filtros.velocidad - Velocidad promedio en km/h
+   * @property {Array} filtros.nodos - Lista de nodos disponibles
+   */
   const [filtros, setFiltros] = useState({
     duracion: '',
     dificultad: '',
@@ -75,13 +99,47 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit, mapViewRef  }) =>
     velocidad: 0,
     nodos: []
   });
-  const [currentRouteLayers, setCurrentRouteLayers] = useState([]); // <-- Añade este estado
-  const [rutasMostradas, setRutasMostradas] = useState(false); // Nuevo estado
+
+  /**
+   * Estado para almacenar las capas de ruta actuales en el mapa
+   * @state {Array} currentRouteLayers - Capas Leaflet de las rutas mostradas
+   */
+  const [currentRouteLayers, setCurrentRouteLayers] = useState([]);
+
+  /**
+   * Estado para controlar si las rutas están siendo mostradas en el mapa
+   * @state {boolean} rutasMostradas - Indica si las rutas están visibles
+   */
+  const [rutasMostradas, setRutasMostradas] = useState(false);
+
+  /**
+   * Estado para almacenar las rutas sugeridas por el backend
+   * @state {Array} rutasSugeridas - Lista de rutas sugeridas con sus propiedades
+   */
   const [rutasSugeridas, setRutasSugeridas] = useState([]);
+
+  /**
+   * Estado para indicar carga durante la búsqueda
+   * @state {boolean} isLoading - Indica si está en proceso de búsqueda
+   */
   const [isLoading, setIsLoading] = useState(false);
+
+  /**
+   * Estado para mensajes de error
+   * @state {string|null} error - Mensaje de error si ocurre alguno
+   */
   const [error, setError] = useState(null);
+
+  /**
+   * Estado para indicar cuando no hay resultados
+   * @state {boolean} noResults - Indica si no se encontraron rutas
+   */
   const [noResults, setNoResults] = useState(false);
 
+  /**
+   * Maneja cambios en los campos del formulario
+   * @param {Object} e - Evento del input
+   */
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFiltros(prev => ({
@@ -90,6 +148,11 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit, mapViewRef  }) =>
     }));
   };
 
+  /**
+   * Maneja el envío del formulario para buscar rutas
+   * @async
+   * @param {Object} e - Evento del formulario
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -98,10 +161,12 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit, mapViewRef  }) =>
     setNoResults(false);
 
     try {
+      // Validación de campos requeridos
       if (!filtros.duracion || !filtros.dificultad || !filtros.experiencia) {
         throw new Error("Todos los campos son requeridos");
       }
 
+      // Preparar datos para la solicitud
       const requestBody = {
         duracion_objetivo: Number(filtros.duracion),
         dificultad: Number(filtros.dificultad),
@@ -109,6 +174,7 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit, mapViewRef  }) =>
         nodos: await loadNodes()
       };
 
+      // Realizar solicitud al backend
       const response = await fetch(`${API_BASE}/generar_rutas`, {
         method: 'POST',
         headers: {
@@ -125,47 +191,32 @@ const ModalRutasPersonalizadas = ({ isOpen, onClose, onSubmit, mapViewRef  }) =>
 
       const data = await response.json();
 
+      // Manejar respuesta
       if (!data.rutas || data.rutas.length === 0) {
         setNoResults(true);
       } else {
-        console.log("rutas",data.rutas)
-        // Asegúrate de que cada ruta tenga sus puntos convertidos al formato correcto
+        // Procesar rutas y asignar colores
         const rutasConColores = data.rutas.map((ruta, index) => {
-          // Validación inicial de la ruta
-          if (!ruta || typeof ruta !== 'object') {
-            console.error('Ruta inválida:', ruta);
-            return null;
-          }
-        
-          // Procesar puntos con validación
+          // Validación y procesamiento de puntos
           let processedPoints = [];
           if (Array.isArray(ruta.points)) {
             processedPoints = ruta.points
               .map(p => {
-            
-              if (typeof p === 'object' && p !== null && 'lat' in p && 'lng' in p) {
+                if (typeof p === 'object' && p !== null && 'lat' in p && 'lng' in p) {
                   return { lat: p.lat, lng: p.lng };
                 }
-                // Formato no reconocido
-                console.warn('Formato de punto no reconocido:', p);
                 return null;
               })
-              .filter(p => p !== null); // Filtrar puntos inválidos
+              .filter(p => p !== null);
           }
-        
-          // Validación final
-          if (processedPoints.length < 2) {
-            console.error('Ruta no tiene suficientes puntos válidos:', ruta);
-            return null;
-          }
-        
+
           return {
             ...ruta,
             points: processedPoints,
             color: ROUTE_COLORS[index % ROUTE_COLORS.length]
           };
-        }).filter(Boolean); // Filtrar rutas inválidas
-console.log("rutasConColores",rutasConColores)
+        }).filter(Boolean);
+
         setRutasSugeridas(rutasConColores);
       }
     } catch (err) {
@@ -175,56 +226,64 @@ console.log("rutasConColores",rutasConColores)
       setIsLoading(false);
     }
   };
+
+  /**
+   * Limpia las rutas mostradas en el mapa
+   */
   const handleExitRouteMode = () => {
-    // Limpiar las capas del mapa
     if (currentRouteLayers.length > 0 && mapViewRef.current) {
       currentRouteLayers.forEach(layer => {
         mapViewRef.current.getMapInstance()?.removeLayer(layer);
       });
       setCurrentRouteLayers([]);
     }
-
     setRutasMostradas(false);
-    onSubmit([]); // Para limpiar cualquier otra visualización
+    onSubmit([]);
   };
+
+  /**
+   * Muestra las rutas sugeridas en el mapa
+   * @async
+   */
   const handleViewOnMap = async () => {
     try {
       if (!rutasSugeridas?.length || !mapViewRef?.current) return;
-  
+
       // Limpiar rutas anteriores
-      onSubmit([]); // Esto limpia las rutas anteriores en el mapa
-      setCurrentRouteLayers([]); // Limpia las referencias anteriores
-  
+      onSubmit([]);
+      setCurrentRouteLayers([]);
+
       const mapInstance = mapViewRef.current.getMapInstance();
       if (!mapInstance) return;
-  
+
+      // Crear y mostrar cada ruta en el mapa
       const newRouteLayers = [];
       for (const ruta of rutasSugeridas) {
         try {
           if (!ruta.points || ruta.points.length < 2) continue;
-  
+
           const layer = await createMultiPointColoredRoute(
             mapInstance,
             ruta.points,
             ruta.color,
             OPENROUTE_API_KEY
           );
-          
+
           if (layer) newRouteLayers.push(layer);
         } catch (error) {
           console.error(`Error al mostrar ruta ${ruta.name}:`, error);
         }
       }
-  
+
       setCurrentRouteLayers(newRouteLayers);
       setRutasMostradas(true);
-  
-      // Ajustar vista del mapa
+
+      // Ajustar vista del mapa para mostrar todas las rutas
       if (newRouteLayers.length > 0) {
         const bounds = newRouteLayers.reduce((acc, layer) => {
           return acc.extend(layer.getBounds());
         }, L.latLngBounds([]));
-        
+
         mapInstance.fitBounds(bounds, { padding: [50, 50] });
       }
       onClose();
@@ -234,13 +293,21 @@ console.log("rutasConColores",rutasConColores)
     }
   };
 
+  /**
+   * Vuelve al formulario de búsqueda
+   */
   const handleBackToForm = () => {
     setRutasSugeridas([]);
     setError(null);
     setNoResults(false);
-    // Notificar al componente padre para limpiar las rutas mostradas
     onSubmit([]);
   };
+
+  /**
+   * Renderiza los detalles de una ruta
+   * @param {Object} ruta - Objeto con los datos de la ruta
+   * @returns {JSX.Element} Componente con los detalles
+   */
 
   const renderRouteDetails = (ruta) => {
     return (
@@ -433,8 +500,8 @@ console.log("rutasConColores",rutasConColores)
                       style={{ backgroundColor: ruta.color }}
                     ></span>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${ruta.difficulty <= 2 ? 'bg-green-100 text-green-800' :
-                        ruta.difficulty <= 3 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
+                      ruta.difficulty <= 3 ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
                       }`}>
                       {ruta.difficulty <= 2 ? 'Fácil' :
                         ruta.difficulty <= 3 ? 'Moderado' : 'Difícil'}
